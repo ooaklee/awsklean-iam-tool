@@ -18,6 +18,7 @@ script_version = "0.0.1"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
+account_identification = None
 
 
 def is_dry_run_active(state: bool) -> None:
@@ -93,6 +94,7 @@ set this before passing the --notify-slack argument.
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
+    argument_group = argument_parser.add_mutually_exclusive_group()
 
     argument_parser.add_argument(
         "-v",
@@ -111,6 +113,24 @@ if __name__ == "__main__":
         "--notify-slack",
         help="Use to send notification(s) back to slack channel using webhook (Soon to be deprecated)",
         action="store_true"
+    )
+
+    argument_group.add_argument(
+        "-ucao",
+        "--use-credential-as-object",
+        help="Use this to pass an object with AWS access key credentials"
+    )
+
+    argument_group.add_argument(
+        "-uap",
+        "--use-aws-profile",
+        help="Use this to tell the tool which of your profiles from your AWS credential file on your local machine to use"
+    )
+
+    argument_group.add_argument(
+        "-uar",
+        "--use-aws-role",
+        help="Use this to pass in the AWS account number and role name (as a comma-separated string) to be used"
     )
 
     args = argument_parser.parse_args()
