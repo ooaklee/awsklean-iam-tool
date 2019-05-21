@@ -19,6 +19,7 @@ script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
 account_identification = None
+boto_config_info = None
 
 
 def is_dry_run_active(state: bool) -> None:
@@ -91,6 +92,43 @@ set this before passing the --notify-slack argument.
         data = json.dumps(configured_message_dict)
     )
 
+def get_current_account_id() -> str:
+    """Gets the alias of the AWS account that's created the IAM client or returns account number
+
+    :param None
+
+    :returns: The alias or account number of the AWS account inspected by the tool
+    :rtype: str
+    """
+    global iam_client
+    global boto_config_info
+
+    # blank alias holder
+    alias_holder = []
+
+    # Get list of aliases used for client
+    alias_paginator = iam_client.get_paginator('list_account_aliases')
+
+    for response in paginator.paginate():
+        alias_holder.append(response['AccountAliases'])
+    
+    # Assumption is made that the alias of the first index in list is correct
+    if len(alias_holder) > 0:
+        # Make sure 'AccountAliases' list is not empty and return
+        if alias_holder[0]:
+            return alias_holder[0]
+        else:
+            # Check to see if boto_config_info has a value set, which will assume 
+            # that either a role, profile, or credential object was passed.
+            if boto_config_info != None:
+                try:
+                    # Use boto_config_info to build STS client and retrieve the account number.
+                    account_number = boto_config_info.client('sts').get_caller_identity().get('Account')
+                except:
+                    # TODO: Create more specific exception handlers with actions
+                    return "N/A - GET ACC FAIL"
+                else:
+                    return account_number
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
@@ -124,7 +162,8 @@ if __name__ == "__main__":
     argument_group.add_argument(
         "-uap",
         "--use-aws-profile",
-        help="Use this to tell the tool which of your profiles from your AWS credential file on your local machine to use"
+        help="Use this to tell the tool which of your profiles from your AWS credential file on your local machine to use",
+        default="default"
     )
 
     argument_group.add_argument(
@@ -143,3 +182,8 @@ if __name__ == "__main__":
 
     # Update global variable if notify-slack passed
     is_notify_slack_active(args.notify_slack)
+
+    # Check to see the option passed to create boto client
+
+    # Get the alias and set to global variable
+    account_identification = get_current_account_id()
