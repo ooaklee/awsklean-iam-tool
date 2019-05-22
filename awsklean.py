@@ -108,7 +108,7 @@ def generate_random_number_between(first: int =  1, last: int = 101) -> int:
     """
     return random.randint(first, last)
 
-def create_boto_client_using(credential: str, is_role: bool = False) -> None:
+def create_boto_client_using(credential: str, is_role: bool = False, session_token: str) -> None:
     """Uses the passed credentials and attempts to create a boto client with it
 
 
@@ -116,6 +116,8 @@ def create_boto_client_using(credential: str, is_role: bool = False) -> None:
     :type credentials: str
     :param is_role: Whether the passed credentials is a role type credential
     :type is_role: bool
+    :param session_token: Token provide when using an assumed role
+    :type str
 
 
     :returns: None
@@ -128,8 +130,45 @@ def create_boto_client_using(credential: str, is_role: bool = False) -> None:
             exit()
         
         # Attempt to use available leading AWS to create STS client
+        try:
+            sts_client = boto_config_info.client('sts')
+        except:
+            sts_client = boto3.client('sts')
+        
+        # Create account number and role name variables
+        aws_account_number_for_role, name_of_role = credential.split(",")
 
-    # If user passed object or aws profile
+        # Attempt to assume role
+        try:
+            assumed_role_object = sts_client.assume_role(
+                RoleArn = f"arn:aws:iam::{aws_account_number_for_role}:role/{name_of_role}",
+                RoleSessionName=f"AssumeRoleSession{generate_random_number_between()}"
+            )
+        except botocore.exceptions.ClientError as e:
+            # Will raise if role assumption fails
+            print(e)
+            print("""ATTENTION:
+The base lead account used (default) does not have permissions to carry out Role Assumption using, AWS STS.
+Please update its Policy to include the AWS IAM service.
+""")
+            exit()
+        else:
+            # Get credential from returned object
+            credential = assumed_role_object['Credentials']
+
+            # Temporary variables to hold assumed credential
+            tmp_access_key_id, tmp_secret_access_key, tmp_session_token = credential['AccessKeyId'],
+                                                                        credential['SecretAccessKey'], 
+                                                                        credential['SessionToken']
+            
+            # Use temporary variables to create IAM client
+            tmp_credential_str_object = f"{{ 'aws_key_id': '{tmp_access_key_id}', 'aws_secret': '{tmp_secret_access_key}' }}"
+            create_boto_client_using( credential=tmp_credential_str_object, 
+                                        is_role=False, 
+                                        session_token=tmp_session_token
+                                    )
+
+    # If user passed object or aws profile name
     else:
         pass
 
@@ -252,6 +291,8 @@ if __name__ == "__main__":
 
     # Update global variable if notify-slack passed
     is_notify_slack_active(args.notify_slack)
+
+    # Initialise IAM client using default profile if local or specified jenkins profile if on jenkins
 
     # Check to see the method the user wishes to authenticate/ create their boto client
     are_set_credentials_arguments_active(args)
