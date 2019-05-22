@@ -3,6 +3,7 @@
 
 import boto3
 import botocore
+from botocore.exceptions import ProfileNotFound
 import sys
 import os
 import argparse
@@ -21,6 +22,7 @@ is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
 account_identification = None
 boto_config_info = None
+iam_client = None
 
 
 def is_dry_run_active(state: bool) -> None:
@@ -108,7 +110,7 @@ def generate_random_number_between(first: int =  1, last: int = 101) -> int:
     """
     return random.randint(first, last)
 
-def create_boto_client_using(credential: str, is_role: bool = False, session_token: str) -> None:
+def create_boto_client_using(credential: str, is_role: bool = False, session_token: str = "") -> None:
     """Uses the passed credentials and attempts to create a boto client with it
 
 
@@ -122,6 +124,9 @@ def create_boto_client_using(credential: str, is_role: bool = False, session_tok
 
     :returns: None
     """
+    global iam_client
+    global boto_config_info
+
     # If the user passed a role
     if is_role:
         # Check to make sure credentials is comma-seperated
@@ -157,9 +162,7 @@ Please update its Policy to include the AWS IAM service.
             credential = assumed_role_object['Credentials']
 
             # Temporary variables to hold assumed credential
-            tmp_access_key_id, tmp_secret_access_key, tmp_session_token = credential['AccessKeyId'],
-                                                                        credential['SecretAccessKey'], 
-                                                                        credential['SessionToken']
+            tmp_access_key_id, tmp_secret_access_key, tmp_session_token = credential['AccessKeyId'], credential['SecretAccessKey'], credential['SessionToken']
             
             # Use temporary variables to create IAM client
             tmp_credential_str_object = f"{{ 'aws_key_id': '{tmp_access_key_id}', 'aws_secret': '{tmp_secret_access_key}' }}"
@@ -170,8 +173,59 @@ Please update its Policy to include the AWS IAM service.
 
     # If user passed object or aws profile name
     else:
-        pass
 
+        # Look for curly brace in credential as this is a unique attribute of credential string object
+        if "{" in credential:
+            # Attempt to convert string object to valid dict
+            try:
+                credential = ast.literal_eval(credential)
+            except ValueError:
+                print("""ATTENTION:
+Ensure you are using the correct format when attempting to pass a
+AWS credential object. It must look like the following:
+
+"{{ 'aws_key_id': '<INSERT_AWS_KEY_HERE>', 'aws_secret': '<INSERT_AWS_SECRET_HERE>' }}" 
+
+IMPORTANT:
+    • Please note the use of single and double quotes!
+""")
+                exit()
+
+        # If conversation took place and successful
+        if isinstance(credential, dict):
+            # Check to see if session token not passed
+            if not session_token:
+                # Create crrent session using dict and assign to global variable
+                current_session = boto3.session.Session(aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'])
+                boto_config_info = current_session
+            else:
+                # Create crrent session using dict AND session token, them assign to global variable
+                current_session = boto3.session.Session(aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'], aws_session_token=session_token)
+                boto_config_info = current_session
+            
+            print(f"{script_name} is connecting using a credential object")
+
+            # Create IAM client using session created above
+            iam_client = current_session.client("iam")
+        
+        # look to see if credential passed a string
+        elif isinstance(credential, str):
+            # Assume the credential pass is set up in the aws credential config file
+            # AND create a session, them assign to global variable 
+            try:
+                current_session = boto3.session.Session(profile_name=credential)
+                boto_config_info = current_session
+
+                # Create IAM client
+                iam_client = current_session.client("iam")
+            except ProfileNotFound:
+                # Will raise if profile cannot be found
+                print(f"""ATTENTION: \nThe profile "{credential}" does not appear to be present in the AWS credentials config file. \nOn Unix systems, this often can be found in the ~/.aws directory. \nPlease double-check and add if necessary!""")
+                exit()
+        
+        else:
+            # Use default AWS credential
+            iam_client = boto3.client('iam')
 
 def get_current_account_id() -> str:
     """Gets the alias of the AWS account that has created the IAM client or returns account number
@@ -237,7 +291,32 @@ def are_set_credentials_arguments_active(arguments: object) -> None:
     # Get the alias and set to global variable
     account_identification = get_current_account_id()
 
+def initialise_leading_iam_client_check(arguments: object) -> None:
+    """Checks the environemt variables to see if on a Jenkins manchine and sees if 
+    expected arguments are passed if true. Otherwise creates leading IAM client with
+    default aws credentials from aws cli
 
+    :param arguments: The arguments passed into script
+    :type: object
+
+    :returns: None
+    """
+    global iam_client
+
+    if os.getenv("JENKINS_URL") != None:
+        # Makre sure user has passed the name of the AWS profile to use on Jenkins
+        if args.jenkins_aws_profile_name:
+            create_boto_client_using(credential=args.jenkins_aws_profile_name)
+        else:
+            print(f"""ATTENTION:
+{script_name} has detected it is being used in a Jenkins system without you declaring which profile it should use by passing either one  of the `--jenkins-aws-profile-name`  OR `-japn` arguments. 
+
+Please pass the argument with a valid profile name and try again!
+""")
+        
+    else:
+        # create placeholder for boto IAM client  
+        iam_client = boto3.client('iam')
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
@@ -260,6 +339,12 @@ if __name__ == "__main__":
         "--notify-slack",
         help="Use to send notification(s) back to slack channel using webhook (Soon to be deprecated)",
         action="store_true"
+    )
+
+    argument_parser.add_argument(
+        "-japn",
+        "--jenkins-aws-profile-name",
+        help="Use to specify the profile name to use as default when on Jenkins",
     )
 
     argument_group.add_argument(
@@ -293,6 +378,7 @@ if __name__ == "__main__":
     is_notify_slack_active(args.notify_slack)
 
     # Initialise IAM client using default profile if local or specified jenkins profile if on jenkins
+    initialise_leading_iam_client_check(args)
 
     # Check to see the method the user wishes to authenticate/ create their boto client
     are_set_credentials_arguments_active(args)
