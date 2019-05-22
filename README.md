@@ -14,6 +14,7 @@ This script requires the following to have core functionality:
 
 ## `ENVIRONMENT VARIABLES`
 * AWSKLEAN_SLACK_WEBHOOK
+* JENKINS_URL
 
 
 `NOTE`
