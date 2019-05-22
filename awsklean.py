@@ -30,6 +30,9 @@ account_identification = None
 boto_config_info = None
 iam_client = None
 list_of_users_to_action = collections.defaultdict(dict)
+super_user_file_name = "superUsers.json"
+super_user_file_url_override_url = None
+super_user_file_url = super_user_file_url_override_url if super_user_file_url_override_url else "https://raw.github.com/ooaklee/awsklean-iam-tool/master/superUsers.json"
 
 
 def is_dry_run_active(state: bool) -> None:
@@ -310,7 +313,78 @@ def convert_this_to_date(string: str = "") -> object:
     :returns: Date object
     :rtype object
     """
-    return dateutil.parser.parse(string)  
+    return dateutil.parser.parse(string)
+
+def load_super_users_file_from(destination: str) -> dict:
+    """Gets the superuser file dependant on destination passed
+
+    :param destination: How the script should attempt to load th file, locally or remotely.
+    :type string
+
+    :returns: Dict containing list of super user IAM user names
+    :rtype dict
+    """
+    global super_user_file_name
+    global script_location
+    global super_user_file_url
+    super_users_data = None
+
+    if destination == "local":
+        # Open file
+        with open(f"{script_location}/{super_user_file_name}", "r") as file:
+            super_users_data=file.read().strip()
+            super_users_data=json.loads(super_users_data)
+        
+        return super_users_data
+    elif destination == "remote":
+        # Download file from URL
+        response = requests.get(super_user_file_url)
+        
+        if response.status_code == 200:
+            # Write content of URL body to file
+            with open(f"{script_location}/{super_user_file_name}", "w") as file:
+                file.write(response.text)
+            
+            # Load file and return
+            load_super_users_file_from(destination="local")
+        else:
+            raise Exception(f"Could not GET from: {super_user_file_url}")
+
+
+
+def get_super_users_dict() -> dict:
+    """Gets the dict which holds the list of super users (AWS IAM user accounts to ignore). Loads locally if present 
+    otherwise pulls from remote location/ URL
+
+    :param None
+
+    :returns: dict of superusers
+    :rtype dict
+    """
+    # Attempt to load super user file locally
+    try:
+        dict_of_super_users = load_super_users_file_from(destination = "local")
+    except IOError:
+        # There isn't a local file 
+        try:
+            dict_of_super_users = load_super_users_file_from(destination = "remote")
+        except:
+            print(f"""ATTENTION:\nPlease save a json file named {super_user_file_name} in {script_location} with a file body as follows:""")
+            print("""
+{
+    "superUsers" : [
+        "<root_account>",
+	"awsklean",
+        "[AWS IAM user name]"
+    ]
+}
+""")
+            print("""
+- [AWS IAM user name] can be multiple users comma separated using JSON forrmatting
+""")
+            exit()
+    
+    return dict_of_super_users
 
 def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: list = get_all_users_in_aws_account, display=False):
     """Checks to see if any user accounts in the source report have not logged in AWS in specified time.
@@ -332,6 +406,9 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
     # List to hold users who have not been used in specified time
     list_of_all_aws_users_out_of_range = []
 
+    # Dict holding list of super users
+    super_user_keep =  get_super_users_dict()
+
     for user in source_report()[1:]:
         user = user.split(",")
 
@@ -341,48 +418,48 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
                 # Check to see if there is any information on the last time password was used
                 if user[4] == 'no_information':
                     # Make sure user is not super user before adding to list
-                    # if user[0] not in list_of_superUs['SuperUser']:
-                    list_of_users_to_action[user[0]]['password_access'] = 'null'
+                    if user[0] not in super_user_keep['superUsers']:
+                        list_of_users_to_action[user[0]]['password_access'] = 'null'
                 # Check if password_last_used is older than the specificed range        
                 elif convert_this_to_date( string = user[4] ) < (current_date_tzutc - number_of_days_as_delta):
                     # Make sure user is not super user before adding to list
-                    # if user[0] not in list_of_superUs['SuperUser']:
-                    list_of_all_aws_users_out_of_range.append(user)
-                    list_of_users_to_action[user[0]]['password_access'] = True
+                    if user[0] not in super_user_keep['superUsers']:
+                        list_of_all_aws_users_out_of_range.append(user)
+                        list_of_users_to_action[user[0]]['password_access'] = True
                 else:
                     # Make sure user is not super user before adding to list
-                    # if user[0] not in list_of_superUs['SuperUser']:
-                    list_of_users_to_action[user[0]]['password_access'] = False
+                    if user[0] not in super_user_keep['superUsers']:
+                        list_of_users_to_action[user[0]]['password_access'] = False
             else:
                 # Make sure user is not super user before adding to list
-                # if user[0] not in list_of_superUs['SuperUser']:
-                list_of_users_to_action[user[0]]['password_access'] = 'null'
+                if user[0] not in super_user_keep['superUsers']:
+                    list_of_users_to_action[user[0]]['password_access'] = 'null'
             # Check if access_key_1_active is set to 'true'
             if user[8] == 'true':
                 # Check to see if access_key_last_used_date is NOT 'N/A'
                 if user[10] != 'N/A':
                     # Check to see if access_key_last_used_date is 'no_information'
                     if user[10] == 'no_information':
-                        # if user[0] not in list_of_superUs['SuperUser']:
-                        list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                        if user[0] not in super_user_keep['superUsers']:
+                            list_of_users_to_action[user[0]]['access_key_1_access'] = True
                     # Check if access_key_1_last_used_date is older than the specificed range
                     elif convert_this_to_date( string = user[10] ) < (current_date_tzutc - number_of_days_as_delta):
                         # Make sure user is not super user before adding to list
-                        # if user[0] not in list_of_superUs['SuperUser']:
-                        list_of_all_aws_users_out_of_range.append(user)
-                        list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                        if user[0] not in super_user_keep['superUsers']:
+                            list_of_all_aws_users_out_of_range.append(user)
+                            list_of_users_to_action[user[0]]['access_key_1_access'] = True
                     else:
                         # Make sure user is not super user before adding to list
-                        # if user[0] not in list_of_superUs['SuperUser']:
-                        list_of_users_to_action[user[0]]['access_key_1_access'] = False
+                        if user[0] not in super_user_keep['superUsers']:
+                            list_of_users_to_action[user[0]]['access_key_1_access'] = False
                 else:
                     # Make sure user is not super user before adding to list
-                    # if user[0] not in list_of_superUs['SuperUser']:
-                    list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                    if user[0] not in super_user_keep['superUsers']:
+                        list_of_users_to_action[user[0]]['access_key_1_access'] = True
             else:
                 # Make sure user is not super user before adding to list
-                # if user[0] not in list_of_superUs['SuperUser']:
-                list_of_users_to_action[user[0]]['access_key_1_access'] = 'null'
+                if user[0] not in super_user_keep['superUsers']:
+                    list_of_users_to_action[user[0]]['access_key_1_access'] = 'null'
 
             # Check if access_key_2_active is set to 'true'
             if user[13] == 'true':
@@ -390,26 +467,26 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
                 if user[15] != 'N/A':
                     # Check to see if access_key_2_last_used_date is 'no_information'
                     if user[15] == 'no_information':
-                        # if user[0] not in list_of_superUs['SuperUser']:
-                        list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                        if user[0] not in super_user_keep['superUsers']:
+                            list_of_users_to_action[user[0]]['access_key_2_access'] = True
                     # Check if access_key_2_last_used_date is older than the specificed range
                     elif convert_this_to_date( string = user[15] ) < (current_date_tzutc - number_of_days_as_delta):
                         # Make sure user is not super user before adding to list
-                        # if user[0] not in list_of_superUs['SuperUser']:
-                        list_of_all_aws_users_out_of_range.append(user)
-                        list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                        if user[0] not in super_user_keep['superUsers']:
+                            list_of_all_aws_users_out_of_range.append(user)
+                            list_of_users_to_action[user[0]]['access_key_2_access'] = True
                     else:
                         # Make sure user is not super user before adding to list
-                        # if user[0] not in list_of_superUs['SuperUser']:
-                        list_of_users_to_action[user[0]]['access_key_2_access'] = False
+                        if user[0] not in super_user_keep['superUsers']:
+                            list_of_users_to_action[user[0]]['access_key_2_access'] = False
                 else:
                     # Make sure user is not super user before adding to list
-                    # if user[0] not in list_of_superUs['SuperUser']:
-                    list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                    if user[0] not in super_user_keep['superUsers']:
+                        list_of_users_to_action[user[0]]['access_key_2_access'] = True
             else:
                 # Make sure user is not super user before adding to list
-                # if user[0] not in list_of_superUs['SuperUser']:
-                list_of_users_to_action[user[0]]['access_key_2_access'] = 'null'
+                if user[0] not in super_user_keep['superUsers']:
+                    list_of_users_to_action[user[0]]['access_key_2_access'] = 'null'
         except KeyError as identifier:
             # TODO: Create more specific actions
             pass
@@ -519,7 +596,6 @@ if __name__ == "__main__":
         "-suwnuw",
         "--show-users-with-no-usage-within",
         help="Use this argument to show information on ALL users in the AWS account outlining any service for each user that has NOT had any usage within the specified number of days (with True), or False otherwise.",
-        default = 60,
         type=int
     )
 
