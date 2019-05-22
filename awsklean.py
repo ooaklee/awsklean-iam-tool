@@ -9,8 +9,9 @@ import argparse
 import ast
 import json
 import requests
+import random
 
-
+                                                                                                                                                                                                                                                              
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
@@ -92,6 +93,21 @@ set this before passing the --notify-slack argument.
         data = json.dumps(configured_message_dict)
     )
 
+# Generate random number
+def generate_random_number_between(first: int =  1, last: int = 101) -> int:
+    """Generates a number between the first and last integers
+
+
+    :param first: Start of generation range
+    :type first: int
+    :param last: End of generation range
+    :type last: int
+
+    :returns: Randomly generated int
+    :rtype: int
+    """
+    return random.randint(first, last)
+
 def create_boto_client_using(credential: str, is_role: bool = False) -> None:
     """Uses the passed credentials and attempts to create a boto client with it
 
@@ -106,7 +122,12 @@ def create_boto_client_using(credential: str, is_role: bool = False) -> None:
     """
     # If the user passed a role
     if is_role:
-        pass
+        # Check to make sure credentials is comma-seperated
+        if ',' not in credential:
+            print("\nPlease ensure you are passing the role using a comma-seperated string.\n Use `python {script_name}.py --help` for more information")
+            exit()
+        
+        # Attempt to use available leading AWS to create STS client
 
     # If user passed object or aws profile
     else:
@@ -151,11 +172,11 @@ def get_current_account_id() -> str:
                 else:
                     return account_number
 
-def are_set_credentials_arguments_active(arguments) -> None:
+def are_set_credentials_arguments_active(arguments: object) -> None:
     """Checks the arguments passed and sees if any AWS credential overrides are present
 
     :param arguments: The arguments passed into script
-    :type: :class:`argparse.Namespace`
+    :type: object
 
     :returns: None
     """
