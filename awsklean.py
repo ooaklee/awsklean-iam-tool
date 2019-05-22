@@ -92,6 +92,18 @@ set this before passing the --notify-slack argument.
         data = json.dumps(configured_message_dict)
     )
 
+def create_boto_client_using(credential: str, is_role=False):
+    """ TODO: add docstring for function
+    """
+    # If the user passed a role
+    if is_role:
+        pass
+
+    # If user passed object or aws profile
+    else:
+        pass
+
+
 def get_current_account_id() -> str:
     """Gets the alias of the AWS account that's created the IAM client or returns account number
 
@@ -129,6 +141,34 @@ def get_current_account_id() -> str:
                     return "N/A - GET ACC FAIL"
                 else:
                     return account_number
+
+def are_set_credentials_arguments_active(arguments) -> None:
+    """Checks the arguments passed and sees if any AWS credential overrides are present
+
+    :param arguments: The arguments passed into script
+    :type: :class:`argparse.Namespace`
+
+    :returns: None
+    """
+    global account_identification
+
+    if arguments.use_aws_profile or arguments.use_credential_as_object:
+        credential_value = ""
+        if arguments.use_credential_as_object:
+            credential_value = arguments.use_credential_as_object
+        else:
+            credential_value = arguments.use_aws_profile
+        # Create boto client using argument
+        create_boto_client_using(credential_value, is_role=False)
+
+    elif arguments.use_aws_role:
+        # Create boto client using argument
+        create_boto_client_using(arguments.use_aws_role, is_role=True)
+
+    # Get the alias and set to global variable
+    account_identification = get_current_account_id()
+
+
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
@@ -183,7 +223,5 @@ if __name__ == "__main__":
     # Update global variable if notify-slack passed
     is_notify_slack_active(args.notify_slack)
 
-    # Check to see the option passed to create boto client
-
-    # Get the alias and set to global variable
-    account_identification = get_current_account_id()
+    # Check to see the method the user wishes to authenticate/ create their boto client
+    are_set_credentials_arguments_active(args)
