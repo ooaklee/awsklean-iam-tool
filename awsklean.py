@@ -11,6 +11,7 @@ import ast
 import json
 import requests
 import random
+import time
 
                                                                                                                                                                                                                                                               
 
@@ -264,6 +265,36 @@ def get_current_account_id() -> str:
                     return "N/A - GET ACC FAIL"
                 else:
                     return account_number
+
+def get_all_users_in_aws_account():
+    """Uses global IAM client to generate a list of all the users in the account with their
+    user account information
+
+    :param None
+
+    :returns: List of user accounts and account information. A row per user.
+    :rtype: list
+    """
+    seconds_to_wait = 5
+
+    # Generate IAM user report
+    response = iam_client.generate_credential_report()
+
+    # Attempt to get report
+    try:
+        response = iam_client.get_credential_report()
+    except iam_client.exceptions.CredentialReportNotReadyException:
+        print(f"""ATTENTION:\nGathering information for all users, please wait.  The process will take approximately {seconds_to_wait} seconds.""")
+        time.sleep(seconds_to_wait)
+        try:
+            response = iam_client.get_credential_report()
+        except iam_client.exceptions.CredentialReportNotReadyException:
+            print(f"""ATTENTION:\nSomething has gone wrong, please try again in around {seconds_to_wait} minutes""")
+            exit()
+    
+    # Return a list with the information about all the users from report
+    return response['Content'].decode().split('\n')  
+
 
 def are_set_credentials_arguments_active(arguments: object) -> None:
     """Checks the arguments passed and sees if any AWS credential overrides are present
