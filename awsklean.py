@@ -8,10 +8,15 @@ import sys
 import os
 import argparse
 import ast
+import collections
 import json
 import requests
 import random
 import time
+import datetime
+from dateutil.tz import tzutc
+import dateutil.parser
+
 
                                                                                                                                                                                                                                                               
 
@@ -24,6 +29,7 @@ is_notify_slack_mode_set = False
 account_identification = None
 boto_config_info = None
 iam_client = None
+list_of_users_to_action = collections.defaultdict(dict)
 
 
 def is_dry_run_active(state: bool) -> None:
@@ -293,8 +299,127 @@ def get_all_users_in_aws_account():
             exit()
     
     # Return a list with the information about all the users from report
-    return response['Content'].decode().split('\n')  
+    return response['Content'].decode().split('\n')
 
+def convert_this_to_date(string: str = "") -> object:
+    """Converts passed string to a date object
+
+    :param string: Date written as string
+    :type string: str
+
+    :returns: Date object
+    :rtype object
+    """
+    return dateutil.parser.parse(string)  
+
+def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: list = get_all_users_in_aws_account, display=False):
+    """Checks to see if any user accounts in the source report have not logged in AWS in specified time.
+
+    :param days: The number of days before today to check up until
+    :type days: int
+    :param source_report: List of the AWS IAM accounts to check
+    :type list
+    :param display: Whether function should output to the terminal or return list
+
+    :returns: List of user objects that are unused within the specified time
+    """
+
+    number_of_days_as_delta = datetime.timedelta(days=number_of_days)
+
+    # Get current date/time in the same timezone used by AWS system
+    current_date_tzutc = datetime.datetime.now(tzutc())
+
+    # List to hold users who have not been used in specified time
+    list_of_all_aws_users_out_of_range = []
+
+    for user in source_report()[1:]:
+        user = user.split(",")
+
+        try:
+            # Check if password_enabled is set to 'true'
+            if user[3] == 'true':
+                # Check to see if there is any information on the last time password was used
+                if user[4] == 'no_information':
+                    # Make sure user is not super user before adding to list
+                    # if user[0] not in list_of_superUs['SuperUser']:
+                    list_of_users_to_action[user[0]]['password_access'] = 'null'
+                # Check if password_last_used is older than the specificed range        
+                elif convert_this_to_date( string = user[4] ) < (current_date_tzutc - number_of_days_as_delta):
+                    # Make sure user is not super user before adding to list
+                    # if user[0] not in list_of_superUs['SuperUser']:
+                    list_of_all_aws_users_out_of_range.append(user)
+                    list_of_users_to_action[user[0]]['password_access'] = True
+                else:
+                    # Make sure user is not super user before adding to list
+                    # if user[0] not in list_of_superUs['SuperUser']:
+                    list_of_users_to_action[user[0]]['password_access'] = False
+            else:
+                # Make sure user is not super user before adding to list
+                # if user[0] not in list_of_superUs['SuperUser']:
+                list_of_users_to_action[user[0]]['password_access'] = 'null'
+            # Check if access_key_1_active is set to 'true'
+            if user[8] == 'true':
+                # Check to see if access_key_last_used_date is NOT 'N/A'
+                if user[10] != 'N/A':
+                    # Check to see if access_key_last_used_date is 'no_information'
+                    if user[10] == 'no_information':
+                        # if user[0] not in list_of_superUs['SuperUser']:
+                        list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                    # Check if access_key_1_last_used_date is older than the specificed range
+                    elif convert_this_to_date( string = user[10] ) < (current_date_tzutc - number_of_days_as_delta):
+                        # Make sure user is not super user before adding to list
+                        # if user[0] not in list_of_superUs['SuperUser']:
+                        list_of_all_aws_users_out_of_range.append(user)
+                        list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                    else:
+                        # Make sure user is not super user before adding to list
+                        # if user[0] not in list_of_superUs['SuperUser']:
+                        list_of_users_to_action[user[0]]['access_key_1_access'] = False
+                else:
+                    # Make sure user is not super user before adding to list
+                    # if user[0] not in list_of_superUs['SuperUser']:
+                    list_of_users_to_action[user[0]]['access_key_1_access'] = True
+            else:
+                # Make sure user is not super user before adding to list
+                # if user[0] not in list_of_superUs['SuperUser']:
+                list_of_users_to_action[user[0]]['access_key_1_access'] = 'null'
+
+            # Check if access_key_2_active is set to 'true'
+            if user[13] == 'true':
+                # Check to see if access_key_2_last_used_date is NOT 'N/A'
+                if user[15] != 'N/A':
+                    # Check to see if access_key_2_last_used_date is 'no_information'
+                    if user[15] == 'no_information':
+                        # if user[0] not in list_of_superUs['SuperUser']:
+                        list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                    # Check if access_key_2_last_used_date is older than the specificed range
+                    elif convert_this_to_date( string = user[15] ) < (current_date_tzutc - number_of_days_as_delta):
+                        # Make sure user is not super user before adding to list
+                        # if user[0] not in list_of_superUs['SuperUser']:
+                        list_of_all_aws_users_out_of_range.append(user)
+                        list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                    else:
+                        # Make sure user is not super user before adding to list
+                        # if user[0] not in list_of_superUs['SuperUser']:
+                        list_of_users_to_action[user[0]]['access_key_2_access'] = False
+                else:
+                    # Make sure user is not super user before adding to list
+                    # if user[0] not in list_of_superUs['SuperUser']:
+                    list_of_users_to_action[user[0]]['access_key_2_access'] = True
+            else:
+                # Make sure user is not super user before adding to list
+                # if user[0] not in list_of_superUs['SuperUser']:
+                list_of_users_to_action[user[0]]['access_key_2_access'] = 'null'
+        except KeyError as identifier:
+            # TODO: Create more specific actions
+            pass
+
+    if display:
+        # Print the list of users to terminal
+        print(json.dumps(list_of_users_to_action, indent=4, separators=(',', ': ')))
+    else:
+        # Return list
+        return list_of_users_to_action
 
 def are_set_credentials_arguments_active(arguments: object) -> None:
     """Checks the arguments passed and sees if any AWS credential overrides are present
@@ -349,6 +474,18 @@ Please pass the argument with a valid profile name and try again!
         # create placeholder for boto IAM client  
         iam_client = boto3.client('iam')
 
+def check_and_action_active(arguments: object) -> None:
+    """Checks the arguments passed to see which combination of functions need to be called and 
+    forward the variables passed to the said function(s).
+
+    :param arguments: The arguments passed into script
+    :type: object
+
+    :returns: None
+    """
+    if arguments.show_users_with_no_usage_within:
+        get_all_users_not_used_in_the_last(number_of_days=arguments.show_users_with_no_usage_within, display=True)
+
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_group = argument_parser.add_mutually_exclusive_group()
@@ -376,6 +513,14 @@ if __name__ == "__main__":
         "-japn",
         "--jenkins-aws-profile-name",
         help="Use to specify the profile name to use as default when on Jenkins",
+    )
+
+    argument_parser.add_argument(
+        "-suwnuw",
+        "--show-users-with-no-usage-within",
+        help="Use this argument to show information on ALL users in the AWS account outlining any service for each user that has NOT had any usage within the specified number of days (with True), or False otherwise.",
+        default = 60,
+        type=int
     )
 
     argument_group.add_argument(
@@ -413,3 +558,6 @@ if __name__ == "__main__":
 
     # Check to see the method the user wishes to authenticate/ create their boto client
     are_set_credentials_arguments_active(args)
+
+    # Check to see what arguments have been passed and require specific action
+    check_and_action_active(args)
