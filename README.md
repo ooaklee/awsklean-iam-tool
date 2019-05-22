@@ -12,6 +12,8 @@ This script requires the following to have core functionality:
 **ADDITIONAL NICE TO HAVES**
 * AWS Roles with STS configured to take requests from main AWS accounts (If you would like to manage multiple accounts)
 
+## `ENVIRONMENT VARIABLES`
+* AWSKLEAN_SLACK_WEBHOOK
 
 
 `NOTE`
