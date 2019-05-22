@@ -92,8 +92,17 @@ set this before passing the --notify-slack argument.
         data = json.dumps(configured_message_dict)
     )
 
-def create_boto_client_using(credential: str, is_role=False):
-    """ TODO: add docstring for function
+def create_boto_client_using(credential: str, is_role: bool = False) -> None:
+    """Uses the passed credentials and attempts to create a boto client with it
+
+
+    :param credentials: Desired credentials as a plain, comma-separated, or object like string
+    :type credentials: str
+    :param is_role: Whether the passed credentials is a role type credential
+    :type is_role: bool
+
+
+    :returns: None
     """
     # If the user passed a role
     if is_role:
@@ -105,7 +114,7 @@ def create_boto_client_using(credential: str, is_role=False):
 
 
 def get_current_account_id() -> str:
-    """Gets the alias of the AWS account that's created the IAM client or returns account number
+    """Gets the alias of the AWS account that has created the IAM client or returns account number
 
     :param None
 
@@ -121,12 +130,12 @@ def get_current_account_id() -> str:
     # Get list of aliases used for client
     alias_paginator = iam_client.get_paginator('list_account_aliases')
 
-    for response in paginator.paginate():
+    for response in alias_paginator.paginate():
         alias_holder.append(response['AccountAliases'])
     
     # Assumption is made that the alias of the first index in list is correct
     if len(alias_holder) > 0:
-        # Make sure 'AccountAliases' list is not empty and return
+        # Make sure 'AccountAliases' list is not empty and return first index
         if alias_holder[0]:
             return alias_holder[0]
         else:
