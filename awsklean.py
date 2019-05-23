@@ -22,7 +22,7 @@ import dateutil.parser
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.0"
+script_version = "1.0.1"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -939,7 +939,7 @@ if __name__ == "__main__":
         "-s",
         "-suwnuw",
         "--show-users-with-no-usage-within",
-        help="Use this argument to show information on ALL users in the AWS account outlining any service for each user that has NOT had any usage within the specified number of days (with True), or False otherwise.",
+        help="Use this argument to show a mini report of ALL IAM users in the AWS account outlining any access method for each user that has NOT had any usage within the specified number of days with True, or False otherwise.",
         type=int
     )
 
