@@ -22,7 +22,7 @@ import dateutil.parser
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "0.0.2"
+script_version = "1.0.0"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -48,6 +48,47 @@ def is_dry_run_active(state: bool) -> None:
 
     is_dry_run_mode_set = state
 
+def dry_run_print(message: str):
+    """Adds the 'dry-run mode' prefix to message before printing to terminal
+
+    :param message: The message to be printed to the terminal
+    :type message: str
+
+    :returns: None
+    """
+    print(f"[DRY-RUN MODE] {message}")
+
+def live_mode_print(message: str):
+    """Adds the 'live mode' prefix to message before printing to terminal
+
+    :param message: The message to be printed to the terminal
+    :type message: str
+
+    :returns: None
+    """
+    print(f"[LIVE MODE] {message}") 
+
+def is_super_user_override_url_passed_in(arguments: object):
+    """Replaces the URL to get default super user json with custom user provided.
+    And removes local superUsers.json file if exists
+
+    :param arguments: Arguments passed into script
+    :type arguments: object
+
+    :returns: None
+    """
+    global super_user_file_url_override_url
+    global super_user_file_name
+    global script_location
+
+    # If override url passed then remove the existing super user list if exist
+    if arguments.super_users_url:
+        if os.path.exists(f"{script_location}/{super_user_file_name}"):
+            os.remove(f"{script_location}/{super_user_file_name}")
+
+        # Override set
+        super_user_file_url_override_url = arguments.super_users_url
+    
 
 def is_notify_slack_active(state: bool) -> None:
     """Checks to see if --slack-notify argument is passed to the script and sets global variable accordingly
@@ -278,7 +319,7 @@ def get_current_account_id() -> str:
     if len(alias_holder) > 0:
         # Make sure 'AccountAliases' list is not empty and return first index
         if alias_holder[0]:
-            return alias_holder[0]
+            return alias_holder[0][0]
         else:
             # Check to see if boto_config_info has a value set, which will assume 
             # that either a role, profile, or credential object was passed.
@@ -515,11 +556,54 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
         # Return list
         return list_of_users_to_action
 
-def list_all_users_not_using_any_access_methods_from(collections_of_users: dict, display=False) -> list:
+def users_with_at_least_one_unused_access_method_from(collections_of_users: dict):
+    """Checks which of the users from the passed collection has at least one access method that failed 
+    preliminary usage test and will be affected if a modifying argument were to be passed.
+
+    :param collections_of_users: Collection of users dict
+    :type collections_of_users: dict
+
+    :returns: None
+    """
+    global account_identification
+    global is_notify_slack_mode_set
+
+    # Blank list to hold affected users
+    affected_users_list = []
+
+    # Loop through collection, find the users that have access methods that will be actioned
+    # and add to blank list
+    for user in collections_of_users.keys():
+        for access_method, value in collections_of_users[user].items():
+            if value and value != 'null':
+                affected_users_list.append(user)
+    
+    # Remove duplicated
+    affected_users_set = set(affected_users_list)
+
+    # Messages
+    simple_message_found_slack = f"The following user(s) meet the requirements for access deletion/ deactivation of at least one of their IAM access methods on AWS account ({account_identification}): • {' • '.join(affected_users_set)}"
+    simple_message_found_local = f"The user(s) below meet the requirement(s) for access deletion/ deactivation of at least one of their IAM access methods on the AWS account [{account_identification}]"
+    simple_message_not_found = f"No users breach the specified period for access deletion/ deactivation on the AWS account [{account_identification}]"
+
+    # Check to see if slack should be notified
+    if is_notify_slack_mode_set:
+        if len(affected_users_set) > 0:
+            send_to_slack_this(message=simple_message_found_slack)
+    
+    # Print list to terminal
+    if len(affected_users_set) > 0:
+        print(simple_message_found_local)
+        for user in affected_users_set:
+            print(f"• {user}")
+    else:
+        print(f"{simple_message_not_found}")
+
+def all_users_not_using_any_access_methods_from(collections_of_users: dict, display=False) -> list:
     """Checks through a collection of users and holds (or shows if requested) any users that are not using any of their access methods to AWS account,
     thus suggesting they can be deleted from the account
 
-    :param collections_of_users: List of users dict
+    :param collections_of_users: Collection of users dict
     :type collections_of_users: dict
     :param display: Whether function should print to terminal (if not return list)
     :type display: bool
@@ -548,22 +632,183 @@ def list_all_users_not_using_any_access_methods_from(collections_of_users: dict,
     # loop through list and see how many users are not using ANY of the access methods
     for user in dict_of_users_access_method_null_count:
         if dict_of_users_access_method_null_count[user] == number_of_access_methods:
-            # If display True, output to terminal other hold in array
-            if display:
-                print(user)
-            else:
-                list_of_unused_user_accounts.append(user)
+            list_of_unused_user_accounts.append(user)
+    
+    # Messages
+    simple_message_found_slack = f"The following users will be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call: • {' • '.join(list_of_unused_user_accounts)}"
+    simple_message_found_local = f"The user(s) below meet the requirement(s) to be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call"
+    simple_message_not_found = f"No users on the AWS account ({account_identification}) breach the specified requirement(s) to be permanently removed."
+
+    # If display True
+    if display:
+        if len(list_of_unused_user_accounts) > 0:
+            print(simple_message_found_local)
+            for user in list_of_unused_user_accounts:
+                print(f"• {user}")
+        else:
+            print(simple_message_not_found)
     
     # Notify slack of affected user accounts
     if is_notify_slack_mode_set:
         if len(list_of_unused_user_accounts) > 0:
-            send_to_slack_this(message=f"The following users will be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call: • {' • '.join(list_of_unused_user_accounts)}")
-
+            send_to_slack_this(message=simple_message_found_slack)
 
     # If display not True then return list of affected users
     if not display:
         return list_of_unused_user_accounts
 
+def remove_password_access_for(user_name: str):
+    """Deletes the console access to AWS account for passed IAM username
+
+    :param user_name: IAM username
+    :user_name: str
+
+    :returns: None
+    """
+    global account_identification
+
+    # Generate simple message
+    simple_message=f"DELETED CONSOLE ACCESS FOR {user_name} ON AWS ACCOUNT {account_identification}"
+    
+    # Check if dry run mode set and print message (NO ACTION)
+    if is_dry_run_mode_set:
+        dry_run_print(message=simple_message)
+    else:
+        # Check if notify slack set and act accordingly
+        if is_notify_slack_mode_set:
+            send_to_slack_this(message=f"{user_name}'s Console Access has been revoked on AWS account ({account_identification}).")
+        
+        # Print to terminal
+        live_mode_print(message=simple_message)
+
+        iam_client.delete_login_profile(
+            UserName=user_name,
+        )
+
+def alter_access_key_for(user_name: str, access_key_number: int, action: str):
+    """Modifys the access key(s) for passed IAM user. It can remove or deactivate dependant on action passed.
+
+    :param user_name: IAM username
+    :type user_name: str
+    :param access_key_number: Use to specify the access key on the user's account which should be modified
+    :type access_key_number: int
+    :param action: Specify whether function should "delete" or "deactivate" the access key
+    :type action: str
+
+    :returns: None
+    """
+    global account_identification
+    global is_dry_run_mode_set
+    global is_notify_slack_mode_set
+    global iam_client
+
+    # Nested function to get access key ID for passed user
+    def get_additional_access_key_information_for(user_name: str = user_name):
+        access_key_infomation_paginator = iam_client.get_paginator('list_access_keys')
+        for information in access_key_infomation_paginator.paginate(UserName=user_name):
+            return information
+    
+    # Nested function to deactivate access key ID for passed user
+    def for_this_users_access_key_do(user: str, access_key: str, action: str):
+        """Acts the passed action to the named access key for the stated user"""
+        if action == "deactivate":
+            # Generate simple message
+            simple_message=f"DEACTIVATED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
+            
+            # Check if dry run mode set and print message (NO ACTION)
+            if is_dry_run_mode_set:
+                dry_run_print(message=simple_message)
+            else:
+                # Check if notify slack set and act accordingly
+                if is_notify_slack_mode_set:
+                    send_to_slack_this(message=f"{user}'s Access Key ({access_key}) has been deactivated on AWS account ({account_identification}).")
+
+                # Print to terminal
+                live_mode_print(message=simple_message)
+
+                # Deactivate access key
+                iam_client.update_access_key(
+                    AccessKeyId=access_key,
+                    Status='Inactive',
+                    UserName=user
+                )
+
+        elif action == "delete":
+             # Generate simple message
+            simple_message=f"DELETED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
+
+            # Check if dry run mode set and print message (NO ACTION)
+            if is_dry_run_mode_set:
+                dry_run_print(message=simple_message)
+            else:
+                # Check if notify slack set and act accordingly
+                if is_notify_slack_mode_set:
+                    send_to_slack_this(message=f"{user}'s Access Key ({access_key}) has been deleted on AWS account ({account_identification}).")
+
+                # Print to terminal
+                live_mode_print(message=simple_message)
+
+                # Delete access key
+                iam_client.delete_access_key(
+                    AccessKeyId=access_key,
+                    UserName=user
+                )
+    
+    # Assign additional information into variable
+    user_access_key_information = get_additional_access_key_information_for()
+
+    # Check to make sure Access Key information exists
+    if not user_access_key_information['AccessKeyMetadata']:
+        print(f"No access key information can be found for user {user_name} on AWS account {account_identification}" )
+        return ""
+    
+    # Verb creator
+    verb = "deactiving" if (action == "deactivate") else "deleting"
+
+    # Check which access key
+    if access_key_number == 1:
+        # Get 1st access key
+        access_key_1 = user_access_key_information['AccessKeyMetadata'][0]['AccessKeyId']
+        print(f"{verb} access_key_1 {access_key_1} for user ({user_name}) on AWS account {account_identification}")
+        for_this_users_access_key_do(user=user_name, access_key=access_key_1, action=action)
+    elif access_key_number == 2:
+        # Get 2nd access key
+        access_key_2 = user_access_key_information['AccessKeyMetadata'][1]['AccessKeyId']
+        print(f"{verb} access_key_2 {access_key_2} for user ({user_name}) on AWS account {account_identification}")
+        for_this_users_access_key_do(user=user_name, access_key=access_key_2, action=action)
+ 
+
+def carry_out_action_on_users_in(users_collection: dict, action = ""):
+    """Runs passed action against any user's methods of access in the users collection that is 'True'
+
+    :param users_collection: Dict of users, each its own dict containing information about user's methods of access status
+    :type users_collection: dict
+    :param action: Action that should be carried out
+    :type action: str
+
+    :returns: None
+    """
+    # Loop through user collection and see what should be actioned
+    for user in users_collection.keys():
+        for access_method, value in users_collection[user].items():
+            # Make sure the value is only True, and not 'null' as non-empty strings are seen as a truthy
+            if value and value != 'null':
+                if access_method == 'access_key_1_access':
+                    # Check which action is passed
+                    if action == 'delete':
+                        alter_access_key_for( user_name = user, access_key_number=1, action=action )
+                    if action == 'deactivate':
+                        alter_access_key_for( user_name = user, access_key_number=1, action=action )
+                elif access_method == 'access_key_2_access':
+                    # Check which action is passed
+                    if action == 'delete':
+                        alter_access_key_for( user_name = user, access_key_number=2, action=action )
+                    if action == 'deactivate':
+                        alter_access_key_for( user_name = user, access_key_number=2, action=action )
+                elif access_method == 'password_access':
+                    # AWS IAM passwords can only be deleted
+                    remove_password_access_for(user_name = user)
+                
 def are_set_credentials_arguments_active(arguments: object) -> None:
     """Checks the arguments passed and sees if any AWS credential overrides are present
 
@@ -636,11 +881,25 @@ def check_and_action_active(arguments: object) -> None:
     if arguments.show_users_with_no_usage_within:
         get_all_users_not_used_in_the_last(number_of_days=arguments.show_users_with_no_usage_within, display=True)
     
+    if arguments.list_users_with_no_usage_within:
+        users_with_at_least_one_unused_access_method_from(collections_of_users=get_all_users_not_used_in_the_last(number_of_days=arguments.list_users_with_no_usage_within))
+
+    if arguments.deactivate_access_for_users_with_no_usage_within:
+        carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(number_of_days=arguments.deactivate_access_for_users_with_no_usage_within), action='deactivate')
+    
+    if arguments.delete_access_for_users_with_no_usage_within:
+        carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(number_of_days=arguments.delete_access_for_users_with_no_usage_within), action='delete')
+    
     if arguments.list_users_to_be_kleaned:
-        list_all_users_not_using_any_access_methods_from( get_all_users_not_used_in_the_last(number_of_days=minimum_days, display=False), display=True)
+        all_users_not_using_any_access_methods_from( get_all_users_not_used_in_the_last(number_of_days=minimum_days, display=False), display=True)
 
 if __name__ == "__main__":
-    argument_parser = argparse.ArgumentParser()
+    argument_parser = argparse.ArgumentParser(
+        description='DESCRIPTION:\n\tA small Python tool for managing IAM user accounts on Amazon Web Services (AWS)',
+        epilog=f'''REPOSITORY:
+        https://github.com/ooaklee/awsklean-iam-tool''',
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     argument_group = argument_parser.add_mutually_exclusive_group()
 
     argument_parser.add_argument(
@@ -663,9 +922,17 @@ if __name__ == "__main__":
     )
 
     argument_parser.add_argument(
+        "-suu",
+        "--super-users-url",
+        help=f"Use to specify the URL for remote JSON file containing super users in specified {script_name} format. \nNOTE: This will delete an local copy before attempting to download!",
+        type=str
+    )
+
+    argument_parser.add_argument(
         "-japn",
         "--jenkins-aws-profile-name",
         help="Use to specify the profile name to use as default when on Jenkins",
+        type=str
     )
 
     argument_parser.add_argument(
@@ -677,9 +944,34 @@ if __name__ == "__main__":
     )
 
     argument_parser.add_argument(
+        "-d",
+        "-dafuwnuw",
+        "--deactivate-access-for-users-with-no-usage-within",
+        help="Use this argument to DEACTIVATE any access method of ALL users in the AWS account that have NOT been used within the specified number of days",
+        type=int
+    )
+
+    argument_parser.add_argument(
+        "-D",
+        "-Dafuwnuw",
+        "--delete-access-for-users-with-no-usage-within",
+        help="Use this argument to DELETE any access method of ALL users in the AWS account that have NOT been used within the specified number of days",
+        type=int
+    )
+
+    argument_parser.add_argument(
+        "-l",
+        "-luwnuw",
+        "--list-users-with-no-usage-within",
+        help="Use this argument to list ALL users in the AWS account that has NOT used at least one of it's access methods within the specified number of days",
+        type=int
+    )
+
+    argument_parser.add_argument(
         "-ar",
         "--aws-region",
         help="Use to specify the region tool should use when creating AWS Clients/ Session",
+        type=str
     )
 
     argument_parser.add_argument(
@@ -693,20 +985,23 @@ if __name__ == "__main__":
     argument_group.add_argument(
         "-ucao",
         "--use-credential-as-object",
-        help="Use this to pass an object with AWS access key credentials"
+        help="Use this to pass an object with AWS access key credentials",
+        type=str
     )
 
     argument_group.add_argument(
         "-uap",
         "--use-aws-profile",
         help="Use this to tell the tool which of your profiles from your AWS credential file on your local machine to use",
-        default="default"
+        default="default",
+        type=str
     )
 
     argument_group.add_argument(
         "-uar",
         "--use-aws-role",
-        help="Use this to pass in the AWS account number and role name (as a comma-separated string) to be used"
+        help="Use this to pass in the AWS account number and role name (as a comma-separated string) to be used",
+        type=str
     )
 
     args = argument_parser.parse_args()
@@ -722,6 +1017,9 @@ if __name__ == "__main__":
 
     # Update global variable for aws region if passed
     is_an_aws_region_passed_in(args.aws_region)
+
+    # Update super user url override if --super-users-url passed
+    is_super_user_override_url_passed_in(args)
 
     # Initialise IAM client using default profile if local or specified jenkins profile if on jenkins
     initialise_leading_iam_client_check(args)
