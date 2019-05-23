@@ -515,6 +515,48 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
         # Return list
         return list_of_users_to_action
 
+def list_all_users_not_using_any_access_methods_from(collections_of_users: dict, display=False) -> list:
+    """Checks through a collection of users and holds (or shows if requested) any users that are not using any of their access methods to AWS account,
+    thus suggesting they can be deleted from the account
+    TODO: docstring
+    """
+    global account_identification
+    global is_notify_slack_mode_set
+    number_of_access_methods = 3
+
+    # Create collection of dict to hold user and of their access method 'null count'
+    dict_of_users_access_method_null_count = collections.defaultdict(dict)
+
+    # Loop through users in passed collection and count null occurences in for access methods
+    for user in collections_of_users:
+        # Set counter to 0 for user
+        dict_of_users_access_method_null_count[user] = 0
+        for access_method, value in collections_of_users[user].items():
+            if value == 'null':
+                dict_of_users_access_method_null_count[user] += 1
+    
+    # List of users that will be modified by tool
+    list_of_unused_user_accounts = []
+
+    # loop through list and see how many users are not using ANY of the access methods
+    for user in dict_of_users_access_method_null_count:
+        if dict_of_users_access_method_null_count[user] == number_of_access_methods:
+            # If display True, output to terminal other hold in array
+            if display:
+                print(user)
+            else:
+                list_of_unused_user_accounts.append(user)
+    
+    # Notify slack of affected user accounts
+    if is_notify_slack_mode_set:
+        if len(list_of_unused_user_accounts) > 0:
+            send_to_slack_this(message=f"The following users will be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call: • {' • '.join(list_of_unused_user_accounts)}")
+
+
+    # If display not True then return list of affected users
+    if not display:
+        return list_of_unused_user_accounts
+
 def are_set_credentials_arguments_active(arguments: object) -> None:
     """Checks the arguments passed and sees if any AWS credential overrides are present
 
