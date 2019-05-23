@@ -22,7 +22,7 @@ import dateutil.parser
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "0.0.1"
+script_version = "0.0.2"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -75,6 +75,19 @@ def should_show_version(passed: bool) -> None:
     if passed:
         print(f"{script_name} version {script_version}")
         exit()
+
+def is_an_aws_region_passed_in(region_option: str) -> None:
+    """Check to see if region value passed and update tool's default region accordingly
+
+    :param region_option: String containing name of AWS region
+    :type region_option: str
+    
+
+    :returns: None
+    """
+
+    if region_option:
+        os.environ["AWS_DEFAULT_REGION"] = region_option
 
 def send_to_slack_this(message: str) -> None:
     """Sends message to specified webhook that's saved as an environment variable
@@ -254,9 +267,13 @@ def get_current_account_id() -> str:
     # Get list of aliases used for client
     alias_paginator = iam_client.get_paginator('list_account_aliases')
 
-    for response in alias_paginator.paginate():
-        alias_holder.append(response['AccountAliases'])
-    
+    try:
+        for response in alias_paginator.paginate():
+            alias_holder.append(response['AccountAliases'])
+    except botocore.exceptions.EndpointConnectionError as err:
+        print(f"""ATTENTION: \nPlease pass an AWS region using the --aws-region argument. \n\t- {str(err)}""")
+        exit()
+
     # Assumption is made that the alias of the first index in list is correct
     if len(alias_holder) > 0:
         # Make sure 'AccountAliases' list is not empty and return first index
@@ -599,6 +616,12 @@ if __name__ == "__main__":
         type=int
     )
 
+    argument_parser.add_argument(
+        "-ar",
+        "--aws-region",
+        help="Use to specify the region tool should use when creating AWS Clients/ Session",
+    )
+
     argument_group.add_argument(
         "-ucao",
         "--use-credential-as-object",
@@ -628,6 +651,9 @@ if __name__ == "__main__":
 
     # Update global variable if notify-slack passed
     is_notify_slack_active(args.notify_slack)
+
+    # Update global variable for aws region if passed
+    is_an_aws_region_passed_in(args.aws_region)
 
     # Initialise IAM client using default profile if local or specified jenkins profile if on jenkins
     initialise_leading_iam_client_check(args)
