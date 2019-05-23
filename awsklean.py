@@ -631,8 +631,13 @@ def check_and_action_active(arguments: object) -> None:
 
     :returns: None
     """
+    minimum_days = 2
+
     if arguments.show_users_with_no_usage_within:
         get_all_users_not_used_in_the_last(number_of_days=arguments.show_users_with_no_usage_within, display=True)
+    
+    if arguments.list_users_to_be_kleaned:
+        list_all_users_not_using_any_access_methods_from( get_all_users_not_used_in_the_last(number_of_days=minimum_days, display=False), display=True)
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
@@ -664,6 +669,7 @@ if __name__ == "__main__":
     )
 
     argument_parser.add_argument(
+        "-s",
         "-suwnuw",
         "--show-users-with-no-usage-within",
         help="Use this argument to show information on ALL users in the AWS account outlining any service for each user that has NOT had any usage within the specified number of days (with True), or False otherwise.",
@@ -674,6 +680,14 @@ if __name__ == "__main__":
         "-ar",
         "--aws-region",
         help="Use to specify the region tool should use when creating AWS Clients/ Session",
+    )
+
+    argument_parser.add_argument(
+        "-L",
+        "-lutbk",
+        "--list-users-to-be-kleaned",
+        help="Use to get a list of all the users accounts that will be remove if --klean-user argument is passed",
+        action="store_true"
     )
 
     argument_group.add_argument(
