@@ -518,7 +518,14 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
 def list_all_users_not_using_any_access_methods_from(collections_of_users: dict, display=False) -> list:
     """Checks through a collection of users and holds (or shows if requested) any users that are not using any of their access methods to AWS account,
     thus suggesting they can be deleted from the account
-    TODO: docstring
+
+    :param collections_of_users: List of users dict
+    :type collections_of_users: dict
+    :param display: Whether function should print to terminal (if not return list)
+    :type display: bool
+
+    :returns: (Optional) List of users not using any access methods
+    :rtype: list
     """
     global account_identification
     global is_notify_slack_mode_set
@@ -596,16 +603,21 @@ def initialise_leading_iam_client_check(arguments: object) -> None:
     global iam_client
 
     if os.getenv("JENKINS_URL") != None:
-        # Makre sure user has passed the name of the AWS profile to use on Jenkins
-        if args.jenkins_aws_profile_name:
-            create_boto_client_using(credential=args.jenkins_aws_profile_name)
-        else:
-            print(f"""ATTENTION:
+        # Make sure Boto3 AWS_* environment variables aren't set
+        if ( os.getenv("AWS_ACCESS_KEY_ID") == None ) and ( os.getenv("AWS_SECRET_ACCESS_KEY") == None ):
+            # Make sure user has passed the name of the AWS profile to use on Jenkins
+            if args.jenkins_aws_profile_name:
+                create_boto_client_using(credential=args.jenkins_aws_profile_name)
+            else:
+                print(f"""ATTENTION:
 {script_name} has detected it is being used in a Jenkins system without you declaring which profile it should use by passing either one  of the `--jenkins-aws-profile-name`  OR `-japn` arguments. 
 
 Please pass the argument with a valid profile name and try again!
 """)
-        
+                exit()
+        else:
+            # Create placeholder for boto IAM client using Jenkin's AWS_ environment variables
+            iam_client = boto3.client('iam')
     else:
         # create placeholder for boto IAM client  
         iam_client = boto3.client('iam')
