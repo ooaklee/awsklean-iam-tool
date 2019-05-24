@@ -1,0 +1,47 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "iam:GenerateCredentialReport",
+                "iam:GetAccountPasswordPolicy",
+                "iam:GetServiceLastAccessedDetailsWithEntities",
+                "iam:ListServerCertificates",
+                "iam:GenerateServiceLastAccessedDetails",
+                "iam:ListPoliciesGrantingServiceAccess",
+                "iam:GetServiceLastAccessedDetails",
+                "iam:ListVirtualMFADevices",
+                "iam:SetSecurityTokenServicePreferences",
+                "iam:SimulateCustomPolicy",
+                "iam:CreateAccountAlias",
+                "iam:GetAccountAuthorizationDetails",
+                "iam:DeleteAccountAlias",
+                "iam:GetCredentialReport",
+                "iam:ListPolicies",
+                "iam:DeleteAccountPasswordPolicy",
+                "iam:ListSAMLProviders",
+                "iam:ListRoles",
+                "iam:GetContextKeysForCustomPolicy",
+                "iam:UpdateAccountPasswordPolicy",
+                "iam:ListOpenIDConnectProviders",
+                "iam:ListAccountAliases",
+                "iam:ListUsers",
+                "iam:ListGroups",
+                "iam:GetAccountSummary"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "iam:*",
+            "Resource": [
+                "arn:aws:iam::*:policy/*",
+                "arn:aws:iam::*:user/*",
+                "arn:aws:iam::*:role/*"
+            ]
+        }
+    ]
+}
