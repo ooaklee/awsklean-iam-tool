@@ -22,7 +22,7 @@ import dateutil.parser
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.2"
+script_version = "1.0.3"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -403,8 +403,8 @@ def load_super_users_file_from(destination: str) -> dict:
             with open(f"{script_location}/{super_user_file_name}", "w") as file:
                 file.write(response.text)
             
-            # Load file and return
-            load_super_users_file_from(destination="local")
+            # Return the dict loaded from the function
+            return load_super_users_file_from(destination="local")
         else:
             raise Exception(f"Could not GET from: {super_user_file_url}")
 
