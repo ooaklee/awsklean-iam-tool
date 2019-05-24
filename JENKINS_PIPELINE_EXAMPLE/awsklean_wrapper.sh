@@ -105,7 +105,6 @@ virtualenv -p ${PYTHON_VERSION} "${script_dir}/venv"
 # Check for error and exit
 if [ "$?" -ne 0 ]; then
     output_message "ERROR: Couldn't find ${PYTHON_VERSION} on host machine. Script will now exit"
-    output_message_to_slack "ERROR: Couldn't find ${PYTHON_VERSION} on host machine. This script will now exit"
     exit 1
 fi
 
