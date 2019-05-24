@@ -11,33 +11,45 @@ pipeline {
         AWSKLEAN_ROLE_NAME="awsklean"
     }
 
-    // Set default IAM credential for awsklean to use to access base AWS accoun
-    withCredentials([usernamePassword(credentialsId: 'awsklean-default-iam-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable:'AWS_SECRET_ACCESS_KEY')]){
-        // Set slack webhook for awsklean to use
-        withCredentials([string(credentialsId: 'awsklean-slack-webhook', variable: 'AWSKLEAN_SLACK_WEBHOOK')]){     
-            stages {
-                // List Accounts that have access methods that haven't been used within day range and will be actioned
-                stage("List IAM users that have access methods not used in day range & notify slack"){
-                    sh """
+    stages {
+        // List Accounts that have access methods that haven't been used within day range and will be actioned
+        stage("List IAM users that have access methods not used in day range & notify slack (SIBLING(S))"){
+            steps{
+                // Set default IAM credential for awsklean to use to access base AWS accoun
+                withCredentials([usernamePassword(credentialsId: 'awsklean-default-iam-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable:'AWS_SECRET_ACCESS_KEY')]){
+                    // Set slack webhook for awsklean to use
+                    withCredentials([string(credentialsId: 'awsklean-slack-webhook', variable: 'AWSKLEAN_SLACK_WEBHOOK')]){
+                        sh """
                             /bin/bash awsklean_wrapper.sh \"--passthrough\" \"-l,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"  \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\"
                         """
+                    }
                 }
-
-                // Sleep for 5 minutes to allow users to cancel pipeline
-                stage("Sleep for 5 seconds to allow user to cancel pipeline"){
-                    sh """
-                            sleep 300
-                        """
-                }
-
-                // disable users' access method that haven't been used within day range
-                stage("Deactivate access method(s) for users that fall outside of range"){
-                    sh """
-                            /bin/bash awsklean_wrapper.sh \"--passthrough\" \"-d,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"  \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\"
-                        """
-                }
-
             }
         }
+
+        // Sleep for 5 minutes to allow users to cancel pipeline
+        stage("Sleep for 5 seconds to allow user to cancel pipeline"){
+            steps{
+                sh """
+                    sleep 300
+                """
+            }
+        }
+
+        // List Accounts that have access methods that haven't been used within day range and will be actioned
+        stage("Deactivate access method(s) for users that fall outside of range"){
+            steps{
+                // Set default IAM credential for awsklean to use to access base AWS accoun
+                withCredentials([usernamePassword(credentialsId: 'awsklean-default-iam-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable:'AWS_SECRET_ACCESS_KEY')]){
+                    // Set slack webhook for awsklean to use
+                    withCredentials([string(credentialsId: 'awsklean-slack-webhook', variable: 'AWSKLEAN_SLACK_WEBHOOK')]){
+                        sh """
+                            /bin/bash awsklean_wrapper.sh \"--passthrough\" \"-d,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"  \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\"
+                        """
+                    }
+                }
+            }
+        }
+    
     }
 }
