@@ -22,7 +22,7 @@ import dateutil.parser
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.1"
+script_version = "1.0.2"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -993,7 +993,6 @@ if __name__ == "__main__":
         "-uap",
         "--use-aws-profile",
         help="Use this to tell the tool which of your profiles from your AWS credential file on your local machine to use",
-        default="default",
         type=str
     )
 
