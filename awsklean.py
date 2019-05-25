@@ -16,13 +16,14 @@ import time
 import datetime
 from dateutil.tz import tzutc
 import dateutil.parser
+import copy
 
 
                                                                                                                                                                                                                                                               
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.3"
+script_version = "1.0.4"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -174,6 +175,16 @@ def generate_random_number_between(first: int =  1, last: int = 101) -> int:
     """
     return random.randint(first, last)
 
+def create_iam_client_using_default_system_credential():
+    """Create an IAM client using boto3 sessions and set relevant global variables
+    """
+    global iam_client
+    global boto_config_info
+
+    current_session = boto3.session.Session()
+    boto_config_info = copy.deepcopy(current_session)
+    iam_client = current_session.client("iam")
+
 def create_boto_client_using(credential: str, is_role: bool = False, session_token: str = "") -> None:
     """Uses the passed credentials and attempts to create a boto client with it
 
@@ -261,11 +272,11 @@ IMPORTANT:
             if not session_token:
                 # Create crrent session using dict and assign to global variable
                 current_session = boto3.session.Session(aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'])
-                boto_config_info = current_session
+                boto_config_info = copy.deepcopy(current_session)
             else:
                 # Create crrent session using dict AND session token, them assign to global variable
                 current_session = boto3.session.Session(aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'], aws_session_token=session_token)
-                boto_config_info = current_session
+                boto_config_info = copy.deepcopy(current_session)
             
             print(f"{script_name} is connecting using a credential object")
 
@@ -278,7 +289,7 @@ IMPORTANT:
             # AND create a session, them assign to global variable 
             try:
                 current_session = boto3.session.Session(profile_name=credential)
-                boto_config_info = current_session
+                boto_config_info = copy.deepcopy(current_session)
 
                 # Create IAM client
                 iam_client = current_session.client("iam")
@@ -289,7 +300,7 @@ IMPORTANT:
         
         else:
             # Use default AWS credential
-            iam_client = boto3.client('iam')
+            create_iam_client_using_default_system_credential()
 
 def get_current_account_id() -> str:
     """Gets the alias of the AWS account that has created the IAM client or returns account number
@@ -315,23 +326,21 @@ def get_current_account_id() -> str:
         print(f"""ATTENTION: \nPlease pass an AWS region using the --aws-region argument. \n\t- {str(err)}""")
         exit()
 
-    # Assumption is made that the alias of the first index in list is correct
-    if len(alias_holder) > 0:
-        # Make sure 'AccountAliases' list is not empty and return first index
-        if alias_holder[0]:
-            return alias_holder[0][0]
-        else:
-            # Check to see if boto_config_info has a value set, which will assume 
-            # that either a role, profile, or credential object was passed.
-            if boto_config_info != None:
-                try:
-                    # Use boto_config_info to build STS client and retrieve the account number.
-                    account_number = boto_config_info.client('sts').get_caller_identity().get('Account')
-                except:
-                    # TODO: Create more specific exception handlers with actions
-                    return "N/A - GET ACC FAIL"
-                else:
-                    return account_number
+    # Assumption is made that the alias in the first index of the list is correct and make sure list is not empty and return first index
+    if len(alias_holder) > 0 and alias_holder[0] != []:
+        return alias_holder[0][0]
+    else:
+        # Check to see if boto_config_info has a value set, which will assume 
+        # that either a role, profile, or credential object was passed.
+        if boto_config_info != None:
+            try:
+                # Use boto_config_info to build STS client and retrieve the account number.
+                account_number = boto_config_info.client('sts').get_caller_identity().get('Account')
+            except:
+                # TODO: Create more specific exception handlers with actions
+                return "N/A - GET ACC FAIL"
+            else:
+                return account_number
 
 def get_all_users_in_aws_account():
     """Uses global IAM client to generate a list of all the users in the account with their
@@ -862,10 +871,10 @@ Please pass the argument with a valid profile name and try again!
                 exit()
         else:
             # Create placeholder for boto IAM client using Jenkin's AWS_ environment variables
-            iam_client = boto3.client('iam')
+            create_iam_client_using_default_system_credential()
     else:
         # create placeholder for boto IAM client  
-        iam_client = boto3.client('iam')
+        create_iam_client_using_default_system_credential()
 
 def check_and_action_active(arguments: object) -> None:
     """Checks the arguments passed to see which combination of functions need to be called and 
