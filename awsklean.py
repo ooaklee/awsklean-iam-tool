@@ -23,7 +23,7 @@ import copy
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.5"
+script_version = "1.0.6"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -245,7 +245,7 @@ Please update its Policy to include the AWS IAM service.
 Ensure you are using the correct format when attempting to pass a
 AWS credential object. It must look like the following:
 
-"{{ 'aws_key_id': '<INSERT_AWS_KEY_HERE>', 'aws_secret': '<INSERT_AWS_SECRET_HERE>' }}" 
+"{ 'aws_key_id': '<INSERT_AWS_KEY_HERE>', 'aws_secret': '<INSERT_AWS_SECRET_HERE>' }" 
 
 IMPORTANT:
     • Please note the use of single and double quotes!

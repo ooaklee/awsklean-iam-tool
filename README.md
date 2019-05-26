@@ -269,7 +269,7 @@ _ARGUMENT OPTION_: `USE_AWS_ROLE` - The AWS account number and role name seperat
 In the event, you don't have the AWS credential file set-up, and you don't have the AWS environment variables set (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) either OR you just want to pass your desired access key through as an argument. You can pass the credentials you would like AWSKlean use as an "object" (very loosely used)
 
 ``` bash
-python awsklean.py -l 30 --ucao "{{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }}"
+python awsklean.py -l 30 --ucao "{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }"
 ```
 
 _ARGUMENT VARIANT(S)_: `--ucao`, `--use-credential-as-object`
@@ -278,7 +278,7 @@ _ARGUMENT OPTION_: `USE_CREDENTIAL_AS_OBJECT` - The AWS access key credential yo
 
 For clarity,
 ```
-"{{ 'aws_key_id': '<INSERT_AWS_KEY_HERE>', 'aws_secret': '<INSERT_AWS_SECRET_HERE>' }}" 
+"{ 'aws_key_id': '<INSERT_AWS_KEY_HERE>', 'aws_secret': '<INSERT_AWS_SECRET_HERE>' }" 
 ```
 
 (type: `string`)
@@ -287,7 +287,7 @@ For clarity,
 If you need to override the AWS region variable
 
 ``` bash
-python awsklean.py -l 30 --ucao "{{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }}" --ar us-east-2
+python awsklean.py -l 30 --ucao "{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }" --ar us-east-2
 ```
 
 _ARGUMENT VARIANT(S)_: `--ar`, `--aws-region`
