@@ -20,7 +20,7 @@ pipeline {
                     // Set slack webhook for awsklean to use
                     withCredentials([string(credentialsId: 'awsklean-slack-webhook', variable: 'AWSKLEAN_SLACK_WEBHOOK')]){
                         sh """
-                            /bin/bash awsklean_wrapper.sh \"--passthrough\" \"-l,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"  \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\"
+                            /bin/bash awsklean_wrapper.sh \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\" \"--passthrough\" \"-l,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"
                         """
                     }
                 }
@@ -44,7 +44,7 @@ pipeline {
                     // Set slack webhook for awsklean to use
                     withCredentials([string(credentialsId: 'awsklean-slack-webhook', variable: 'AWSKLEAN_SLACK_WEBHOOK')]){
                         sh """
-                            /bin/bash awsklean_wrapper.sh \"--passthrough\" \"-d,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"  \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\"
+                            /bin/bash awsklean_wrapper.sh \"--aws-account-numbers\" \"${env.AWSKLEAN_AWS_ACCOUNT_NUMBERS}\" \"--aws-profile\" \"${env.AWSKLEAN_ROLE_NAME}\" \"--passthrough\" \"-d,${env.AWSKLEAN_DAY_RANGE}:--notify-slack:\"  
                         """
                     }
                 }
