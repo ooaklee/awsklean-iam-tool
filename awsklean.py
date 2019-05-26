@@ -23,7 +23,7 @@ import copy
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.4"
+script_version = "1.0.5"
 script_name = sys.argv[0].strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -103,20 +103,6 @@ def is_notify_slack_active(state: bool) -> None:
     global is_notify_slack_mode_set
 
     is_notify_slack_mode_set = state
-
-
-def should_show_version(passed: bool) -> None:
-    """Prints the tool's version number to the terminal and exits tool
-
-
-    :param passed: Whether --version argument was passed
-    :type passed: bool
-
-    :returns: None
-    """
-    if passed:
-        print(f"{script_name} version {script_version}")
-        exit()
 
 def is_an_aws_region_passed_in(region_option: str) -> None:
     """Check to see if region value passed and update tool's default region accordingly
@@ -914,8 +900,8 @@ if __name__ == "__main__":
     argument_parser.add_argument(
         "-v",
         "--version",
-        help="Use to check the version of the tool",
-        action="store_true"
+        action="version",
+        version=f"{script_name[:4].upper() + script_name[4:].lower()} v. {script_version}"
     )
 
     argument_parser.add_argument(
@@ -931,91 +917,88 @@ if __name__ == "__main__":
     )
 
     argument_parser.add_argument(
-        "-suu",
         "--super-users-url",
+        "--suu",
         help=f"Use to specify the URL for remote JSON file containing super users in specified {script_name} format. \nNOTE: This will delete an local copy before attempting to download!",
         type=str
     )
 
     argument_parser.add_argument(
-        "-japn",
         "--jenkins-aws-profile-name",
+        "--japn",
         help="Use to specify the profile name to use as default when on Jenkins",
         type=str
     )
 
     argument_parser.add_argument(
         "-s",
-        "-suwnuw",
         "--show-users-with-no-usage-within",
+        "--suwnuw",
         help="Use this argument to show a mini report of ALL IAM users in the AWS account outlining any access method for each user that has NOT had any usage within the specified number of days with True, or False otherwise.",
         type=int
     )
 
     argument_parser.add_argument(
         "-d",
-        "-dafuwnuw",
         "--deactivate-access-for-users-with-no-usage-within",
+        "--dafuwnuw",
         help="Use this argument to DEACTIVATE any access method of ALL users in the AWS account that have NOT been used within the specified number of days",
         type=int
     )
 
     argument_parser.add_argument(
         "-D",
-        "-Dafuwnuw",
         "--delete-access-for-users-with-no-usage-within",
-        help="Use this argument to DELETE any access method of ALL users in the AWS account that have NOT been used within the specified number of days",
+        "--Dafuwnuw",
+        help="Use this argument to DELETE any access method of ALL users in the AWS account that have NOT been used within the specified number of days [W.I.P]",
         type=int
     )
 
     argument_parser.add_argument(
         "-l",
-        "-luwnuw",
         "--list-users-with-no-usage-within",
+        "--luwnuw",
         help="Use this argument to list ALL users in the AWS account that has NOT used at least one of it's access methods within the specified number of days",
         type=int
     )
 
     argument_parser.add_argument(
-        "-ar",
         "--aws-region",
+        "--ar",
         help="Use to specify the region tool should use when creating AWS Clients/ Session",
         type=str
     )
 
     argument_parser.add_argument(
         "-L",
-        "-lutbk",
         "--list-users-to-be-kleaned",
+        "--lutbk",
         help="Use to get a list of all the users accounts that will be remove if --klean-user argument is passed",
         action="store_true"
     )
 
     argument_group.add_argument(
-        "-ucao",
         "--use-credential-as-object",
+        "--ucao",
         help="Use this to pass an object with AWS access key credentials",
         type=str
     )
 
     argument_group.add_argument(
-        "-uap",
         "--use-aws-profile",
+        "--uap",
         help="Use this to tell the tool which of your profiles from your AWS credential file on your local machine to use",
         type=str
     )
 
     argument_group.add_argument(
-        "-uar",
         "--use-aws-role",
+        "--uar",
         help="Use this to pass in the AWS account number and role name (as a comma-separated string) to be used",
         type=str
     )
 
     args = argument_parser.parse_args()
-
-    # Action if version argument(s) passed
-    should_show_version(args.version)
 
     # Update global variable if dry-run passed
     is_dry_run_active(args.dry_run)
