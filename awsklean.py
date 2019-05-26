@@ -23,7 +23,7 @@ import copy
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.7"
+script_version = "1.0.8"
 script_name = os.path.basename(__file__).strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -133,7 +133,7 @@ def send_to_slack_this(message: str) -> None:
         print("""Unable to detect an environmental variable with the name AWSKLEAN_SLACK_WEBHOOK, Please
 set this before passing the --notify-slack argument.
         """)
-        exit()
+        exit(1)
     
     # Build valid dict containing message and configuration
     configured_message_dict = ast.literal_eval(
@@ -193,7 +193,7 @@ def create_boto_client_using(credential: str, is_role: bool = False, session_tok
         # Check to make sure credentials is comma-seperated
         if ',' not in credential:
             print("\nPlease ensure you are passing the role using a comma-seperated string.\n Use `python {script_name}.py --help` for more information")
-            exit()
+            exit(1)
         
         # Attempt to use available leading AWS to create STS client
         try:
@@ -217,7 +217,7 @@ def create_boto_client_using(credential: str, is_role: bool = False, session_tok
 The base lead account used (default) does not have permissions to carry out Role Assumption using, AWS STS.
 Please update its Policy to include the AWS IAM service.
 """)
-            exit()
+            exit(1)
         else:
             # Get credential from returned object
             credential = assumed_role_object['Credentials']
@@ -250,7 +250,7 @@ AWS credential object. It must look like the following:
 IMPORTANT:
     • Please note the use of single and double quotes!
 """)
-                exit()
+                exit(1)
 
         # If conversation took place and successful
         if isinstance(credential, dict):
@@ -282,7 +282,7 @@ IMPORTANT:
             except ProfileNotFound:
                 # Will raise if profile cannot be found
                 print(f"""ATTENTION: \nThe profile "{credential}" does not appear to be present in the AWS credentials config file. \nOn Unix systems, this often can be found in the ~/.aws directory. \nPlease double-check and add if necessary!""")
-                exit()
+                exit(1)
         
         else:
             # Use default AWS credential
@@ -310,7 +310,7 @@ def get_current_account_id() -> str:
             alias_holder.append(response['AccountAliases'])
     except botocore.exceptions.EndpointConnectionError as err:
         print(f"""ATTENTION: \nPlease pass an AWS region using the --aws-region argument. \n\t- {str(err)}""")
-        exit()
+        exit(1)
 
     # Assumption is made that the alias in the first index of the list is correct and make sure list is not empty and return first index
     if len(alias_holder) > 0 and alias_holder[0] != []:
@@ -352,7 +352,7 @@ def get_all_users_in_aws_account():
             response = iam_client.get_credential_report()
         except iam_client.exceptions.CredentialReportNotReadyException:
             print(f"""ATTENTION:\nSomething has gone wrong, please try again in around {seconds_to_wait} minutes""")
-            exit()
+            exit(1)
     
     # Return a list with the information about all the users from report
     return response['Content'].decode().split('\n')
@@ -435,7 +435,7 @@ def get_super_users_dict() -> dict:
             print("""
 - [AWS IAM user name] can be multiple users comma separated using JSON forrmatting
 """)
-            exit()
+            exit(1)
     
     return dict_of_super_users
 
@@ -854,7 +854,7 @@ def initialise_leading_iam_client_check(arguments: object) -> None:
 
 Please pass the argument with a valid profile name and try again!
 """)
-                exit()
+                exit(1)
         else:
             # Create placeholder for boto IAM client using Jenkin's AWS_ environment variables
             create_iam_client_using_default_system_credential()
