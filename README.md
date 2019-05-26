@@ -31,18 +31,40 @@ Features include:
 - _access method_ - An `access method` is the way how the user connects to AWS account. This can either be access key(s) or console access
 - _super users_ - A group of user accounts which should be ignored at all cost by AWSKlean, found in a file with body [like](/superUsers.json). More information can be found [HERE](###-SUPER-USERS-JSON)
 
-## `INSTALLING REQUIREMENTS`
 
-Install the tool's requirements by navigating to root directory  of repo and running: `pip install -r requirements.txt`
+## `QUICK START`
 
+Set up your AWS credentials (in e.g. ``~/.aws/credentials``):
+```
+[default]
+aws_access_key_id = YOUR_KEY
+aws_secret_access_key = YOUR_SECRET
+```
+
+Then, set up a default region (in e.g. ``~/.aws/config``):
+```
+[default]
+region=us-east-1
+```
+
+Then, install `AWSKlean` requirements, by navigating to root directory of the cloned repo and running:
+``` bash
+pip install -r requirements.txt
+```
 I often use a virtual environment, more information about setting up a virtual environment can be found [HERE](https://realpython.com/python-virtual-environments-a-primer/)
+
+Then, run your desired commands!
+``` bash
+python awsklean.py -l 30
+```
+
 
 ## USAGE
 
 ### `GETTING TOOL HELP MESSAGE`
 To get information on what arguments the tools can take 
 ``` bash
-    python awsklean.py --help
+python awsklean.py --help
 ```
 
 _ARGUMENT VARIANT(S)_: `-h`, `--help` 
@@ -101,7 +123,7 @@ To get a list of IAM user accounts (excluding [super users](###-SUPER-USERS-JSON
 time
 
 ``` bash
-    python awsklean.py -l 30
+python awsklean.py -l 30
 ```
 
 _ARGUMENT VARIANT(S)_: `-l`, `--luwnuw`, `--list-users-with-no-usage-within`
@@ -121,7 +143,7 @@ To notify slack ensure the environment variable `AWSKLEAN_SLACK_WEBHOOK` is set 
 pass the argument `--notify-slack`. The command should look like:
 
 ``` bash
-    python awsklean.py -l 30 --notify-slack
+python awsklean.py -l 30 --notify-slack
 ```
 
 You will received a slack notification similar to:
@@ -133,7 +155,7 @@ The following user(s) meet the requirements for access deletion/ deactivation of
 To get a micro-report of all the IAM users on AWS account (excluding [super users](###-SUPER-USERS-JSON)) and whether they have not used their access
 method(s) in passed number of days.
 ``` bash
-    python awsklean.py -s 30
+python awsklean.py -s 30
 ```
 
 _ARGUMENT VARIANT(S)_: `-s`, `--suwnuw`, `--show-users-with-no-usage-within`
@@ -174,7 +196,7 @@ Breaking down the micro-report
 ### `DEACTIVATE ACCESS METHOD(S) NOT USED WITHIN X DAYS`
 To deactivate any access methods that have not been used by user(s) (excluding [super users](###-SUPER-USERS-JSON)) within passed number of days.
 ``` bash
-    python awsklean.py -d 30
+python awsklean.py -d 30
 ```
 
 _ARGUMENT VARIANT(S)_: `-d`, `--dafuwnuw`, `--deactivate-access-for-users-with-no-usage-within`
@@ -198,7 +220,7 @@ use of the `--notify-slack` argument.
 
 The command when using dry run will look similar to:
 ``` bash
-    python awsklean.py -d 30 --dry-run
+python awsklean.py -d 30 --dry-run
 ```
 
 Expect to see an output that looks as follows:
@@ -214,7 +236,7 @@ deactiving access_key_1 QQQQQQQQQQQQQQQQQQ for user (user3) on AWS account <ACCO
 When using `--notify-slack` the message on slack will be very similar to the message above. It can be passed
 in the same command as `--dry-run`, for example:
 ``` bash
-    python awsklean.py -d 30 --dry-run --notify-slack
+python awsklean.py -d 30 --dry-run --notify-slack
 ```
 
 ### `OVERRIDING AWS CREDENTIALS`
@@ -224,7 +246,7 @@ in the same command as `--dry-run`, for example:
 If you have multiple profiles in your AWS credential file you can tell `AWSKlean` to use one by passing its name. This will allow `AWSKlean` to run commands on other accounts so long the profile used has the correct permissions to the `IAM service` 
 
 ``` bash
-    python awsklean.py -l 30 --uap exampleprofile
+python awsklean.py -l 30 --uap exampleprofile
 ```
 
 _ARGUMENT VARIANT(S)_: `--uap`, `--use-aws-profile`
@@ -235,7 +257,7 @@ _ARGUMENT OPTION_: `USE_AWS_PROFILE` - profile name to use (type: `string`)
 Once you've configured your [role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) (it should be able to take calls for your 'master' AWS account number and have permission to IAM service), you can tell `AWSKlean` Use can use the AWS role with
 
 ``` bash
-    python awsklean.py -l 30 --uar "11122223333,awsklean"
+python awsklean.py -l 30 --uar "11122223333,awsklean"
 ```
 
 _ARGUMENT VARIANT(S)_: `--uar`, `--use-aws-role`
@@ -246,7 +268,7 @@ _ARGUMENT OPTION_: `USE_AWS_ROLE` - The AWS account number and role name seperat
 In the event, you don't have the AWS credential file set-up, and you don't have the AWS environment variables set (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) either OR you just want to pass your desired access key through as an argument. You can pass the credentials you would like AWSKlean use as an "object" (very loosely used)
 
 ``` bash
-    python awsklean.py -l 30 --ucao "{{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }}"
+python awsklean.py -l 30 --ucao "{{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }}"
 ```
 
 _ARGUMENT VARIANT(S)_: `--ucao`, `--use-credential-as-object`
@@ -264,7 +286,7 @@ For clarity,
 If you need to override the AWS region variable
 
 ``` bash
-    python awsklean.py -l 30 --ucao "{{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }}" --ar us-east-2
+python awsklean.py -l 30 --ucao "{{ 'aws_key_id': 'ABCDefGHijkL123', 'aws_secret': 'AWSv3ryS3cr37k3y' }}" --ar us-east-2
 ```
 
 _ARGUMENT VARIANT(S)_: `--ar`, `--aws-region`
@@ -275,7 +297,7 @@ _ARGUMENT OPTION_: `AWS_REGION` - The AWS region you wish to use (type: `string`
 If you decide to run `AWSKlean` on your Jenkins server as a means of periodically checking the state of your AWS account(s) and you have a specific profile in the server's AWS credential file you wish to use, you can use the `--japn` argument.
 
 ``` bash
-    python awsklean.py -l 30 --japn jenkinsuserprofile --notify-slack
+python awsklean.py -l 30 --japn jenkinsuserprofile --notify-slack
 ```
 
 _ARGUMENT VARIANT(S)_: `--japn`, `--jenkins-aws-profile-name`
@@ -291,7 +313,7 @@ If a `superUsers.json` is located next to the script, it will use that. This mea
 for example:
 
 ``` bash
-    python awsklean.py -l 30 --super-users-url http://s000.tinyupload.com/?file_id=61358988828110367310 --notify-slack
+python awsklean.py -l 30 --super-users-url http://s000.tinyupload.com/?file_id=61358988828110367310 --notify-slack
 ```
 
 _ARGUMENT VARIANT(S)_: `--suu`, `--super-users-url`
