@@ -302,7 +302,7 @@ python awsklean.py -l 30 --japn jenkinsuserprofile --notify-slack
 
 _ARGUMENT VARIANT(S)_: `--japn`, `--jenkins-aws-profile-name`
 
-_ARGUMENT OPTION_: `AWS_REGION` - The profile name on your jenkins server to use (type: `string`)
+_ARGUMENT OPTION_: `JENKINS_AWS_PROFILE_NAME` - The profile name on your jenkins server to use (type: `string`)
 
 
 ### `SUPER USERS JSON`
@@ -318,7 +318,7 @@ python awsklean.py -l 30 --super-users-url http://s000.tinyupload.com/?file_id=6
 
 _ARGUMENT VARIANT(S)_: `--suu`, `--super-users-url`
 
-_ARGUMENT OPTION_: A URL to a [super users file](superUsers.json)
+_ARGUMENT OPTION_: `SUPER_USERS_URL` - A URL to a [super users file](superUsers.json)
 
 As its only a JSON file, you can use a website such as [Tiny Upload](http://www.tinyupload.com/) to serve your version of this [file](superUsers.json).    
 
