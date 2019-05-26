@@ -52,7 +52,7 @@ Features include:
 - _super users_ - A group of user accounts which should be ignored at all cost by AWSKlean, found in a file with body [like](/superUsers.json). More information can be found [HERE](#SUPER-USERS-JSON)
 
 
-## `NOTABLE ENVIRONMENT VARIABLES`
+### `NOTABLE ENVIRONMENT VARIABLES`
 * AWSKLEAN_SLACK_WEBHOOK
 * JENKINS_URL
 * AWS_DEFAULT_REGION
