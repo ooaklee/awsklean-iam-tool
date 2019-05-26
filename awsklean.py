@@ -23,8 +23,8 @@ import copy
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.6"
-script_name = sys.argv[0].strip(".py")
+script_version = "1.0.7"
+script_name = os.path.basename(__file__).strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
 account_identification = None
@@ -850,7 +850,7 @@ def initialise_leading_iam_client_check(arguments: object) -> None:
                 create_boto_client_using(credential=args.jenkins_aws_profile_name)
             else:
                 print(f"""ATTENTION:
-{script_name} has detected it is being used in a Jenkins system without you declaring which profile it should use by passing either one  of the `--jenkins-aws-profile-name`  OR `-japn` arguments. 
+{script_name} has detected it is being used in a Jenkins system without you declaring which profile it should use by passing either one  of the `--jenkins-aws-profile-name`  OR `--japn` arguments. 
 
 Please pass the argument with a valid profile name and try again!
 """)
