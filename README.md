@@ -49,7 +49,7 @@ Features include:
 
 ## TERMS
 - _access method_ - An `access method` is the way how the user connects to AWS account. This can either be access key(s) or console access
-- _super users_ - A group of user accounts which should be ignored at all cost by AWSKlean, found in a file with body [like](/superUsers.json). More information can be found [HERE](###-SUPER-USERS-JSON)
+- _super users_ - A group of user accounts which should be ignored at all cost by AWSKlean, found in a file with body [like](/superUsers.json). More information can be found [HERE](#SUPER-USERS-JSON)
 
 
 ## `NOTABLE ENVIRONMENT VARIABLES`
@@ -120,7 +120,7 @@ REPOSITORY:
 ```
 
 ### `IAM ACCOUNT WITH ACCESS METHOD(S) NOT USED IN SPECIFIED DAYS`
-To get a list of IAM user accounts (excluding [super users](###-SUPER-USERS-JSON)) that have at least one access method that has not been used in specified
+To get a list of IAM user accounts (excluding [super users](#SUPER-USERS-JSON)) that have at least one access method that has not been used in specified
 time
 
 ``` bash
@@ -153,7 +153,7 @@ The following user(s) meet the requirements for access deletion/ deactivation of
 ```
 
 ### `MICRO-REPORT FOR ALL IAM USERS ON AWS ACCOUNT (SHOWS WHETHER THEY HAVE NOT USED ACCESS METHOD)`
-To get a micro-report of all the IAM users on AWS account (excluding [super users](###-SUPER-USERS-JSON)) and whether they have not used their access
+To get a micro-report of all the IAM users on AWS account (excluding [super users](#SUPER-USERS-JSON)) and whether they have not used their access
 method(s) in passed number of days.
 ``` bash
 python awsklean.py -s 30
@@ -195,7 +195,7 @@ Breaking down the micro-report
 `false` - This means the access method has been used in the given number of days by the IAM user account.
 
 ### `DEACTIVATE ACCESS METHOD(S) NOT USED WITHIN X DAYS`
-To deactivate any access methods that have not been used by user(s) (excluding [super users](###-SUPER-USERS-JSON)) within passed number of days.
+To deactivate any access methods that have not been used by user(s) (excluding [super users](#SUPER-USERS-JSON)) within passed number of days.
 ``` bash
 python awsklean.py -d 30
 ```
