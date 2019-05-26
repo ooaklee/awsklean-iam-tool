@@ -10,28 +10,6 @@ This script requires the following to have core functionality:
 * AWS IAM profile with `Full Access` on IAM service and ...(MORE TO BE ADDED) - WIP example will be added to the repo
 
 
-## `NOTABLE ENVIRONMENT VARIABLES`
-* AWSKLEAN_SLACK_WEBHOOK
-* JENKINS_URL
-* AWS_DEFAULT_REGION
-* AWS_ACCESS_KEY_ID
-* AWS_SECRET_ACCESS_KEY
-
-
-## FEATURES
-Features include:
-- **Tested with Python versions 3.6** 
-- Allows user to get information about the last time access methods (Access Key(s) and Console access) are used on their AWS
-- Allows user to disable account methods for IAM users that haven't been used within a specified time
--  AWSKlean provides notification via. Slack if webhook provided
-- Gives a micro-report for each user on AWS account, outlining whether access method has NOT been used in specified time.
-
-
-## TERMS
-- _access method_ - An `access method` is the way how the user connects to AWS account. This can either be access key(s) or console access
-- _super users_ - A group of user accounts which should be ignored at all cost by AWSKlean, found in a file with body [like](/superUsers.json). More information can be found [HERE](###-SUPER-USERS-JSON)
-
-
 ## `QUICK START`
 
 Set up your AWS credentials (in e.g. ``~/.aws/credentials``):
@@ -57,6 +35,29 @@ Then, run your desired commands!
 ``` bash
 python awsklean.py -l 30
 ```
+
+
+## FEATURES
+**_Tested with Python version 3.6_**
+
+Features include:
+- Allows user to get information about whether access methods (Access Key(s) and Console access) for all users (excluding super users) have not used within a set period
+- Allows user to disable access methods for IAM users that have not been used within a specified time
+- AWSKlean offers integration with Slack via. sending notifications through the use of slack webhook
+- Gives a micro-report for all user on AWS account (excluding super users), outlining which of the access methods the user has NOT used in specified time.
+
+
+## TERMS
+- _access method_ - An `access method` is the way how the user connects to AWS account. This can either be access key(s) or console access
+- _super users_ - A group of user accounts which should be ignored at all cost by AWSKlean, found in a file with body [like](/superUsers.json). More information can be found [HERE](###-SUPER-USERS-JSON)
+
+
+## `NOTABLE ENVIRONMENT VARIABLES`
+* AWSKLEAN_SLACK_WEBHOOK
+* JENKINS_URL
+* AWS_DEFAULT_REGION
+* AWS_ACCESS_KEY_ID
+* AWS_SECRET_ACCESS_KEY
 
 
 ## USAGE
