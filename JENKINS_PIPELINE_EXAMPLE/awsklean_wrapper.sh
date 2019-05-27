@@ -43,17 +43,17 @@ function output_message()
 
 
 # Check if repo exist and up-to-date or pull otherwise
-function repo_checker_puller_doer()
+function check_and_pull_latest_from_repo()
 {
-    if [ -d "${LOCAL_REPO}" ]; then
-        # Pull the latest version of tool if directory already exists
-        output_message "Pulling latest version of repo"
-        git -C "${LOCAL_REPO}" pull
-    else
-        # Clone repo to current directory
-        output_message "Cloning a new version of repo"
-        git -C "${script_dir}" clone git@github.com:ooaklee/awsklean-iam-tool.git
+    if [  ! -d "${LOCAL_REPO}" ]; then
+        # Create a directory
+        output_message "Creating directory (${LOCAL_REPO})"
+        mkdir -p "${LOCAL_REPO}"
     fi
+
+    # Download files to desired directory
+    output_message "Downloading latest version(s) of awsklean and requiements"
+    curl -L -o "${LOCAL_REPO}/awsklean.py" https://raw.github.com/ooaklee/awsklean-iam-tool/master/awsklean.py && curl -L -o "${LOCAL_REPO}/requirements.txt" https://raw.github.com/ooaklee/awsklean-iam-tool/master/requirements.txt  
 }
 
 # Make sure argument passed is authentic
@@ -113,7 +113,7 @@ output_message "Source virtual venv"
 source "${script_dir}/venv/bin/activate"
 
 # Pull awsklean repo
-repo_checker_puller_doer
+check_and_pull_latest_from_repo
 
 # Install requirements
 output_message "Installing requirements for virtual venv"
@@ -142,7 +142,7 @@ CONV
 
     # Run awsklean
     if [ -z "$AWSKLEAN_WRAPPER_ACCOUNT_NUMBERS" ]; then
-        exec ${PYTHON_VERSION} "${LOCAL_REPO}/awsklean.py" $arguments_insert_ready
+       ${PYTHON_VERSION} "${LOCAL_REPO}/awsklean.py" $arguments_insert_ready
     else
         # Split account number string to array
         IFS=',' read -r -a account_number_array <<< "$AWSKLEAN_WRAPPER_ACCOUNT_NUMBERS"
