@@ -155,7 +155,7 @@ CONV
                 exit 1
             else
                 # Loop through accounts
-                exec ${PYTHON_VERSION} "${LOCAL_REPO}/awsklean.py" $arguments_insert_ready --use-aws-role "${aws_account_number},${AWSKLEAN_WRAPPER_ROLE_NAME}"
+                ${PYTHON_VERSION} "${LOCAL_REPO}/awsklean.py" $arguments_insert_ready --use-aws-role "${aws_account_number},${AWSKLEAN_WRAPPER_ROLE_NAME}"
                 sleep 5
             fi
         done
