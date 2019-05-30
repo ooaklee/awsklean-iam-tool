@@ -23,7 +23,7 @@ import copy
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.8"
+script_version = "1.0.9"
 script_name = os.path.basename(__file__).strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -34,6 +34,7 @@ list_of_users_to_action = collections.defaultdict(dict)
 super_user_file_name = "superUsers.json"
 super_user_file_url_override_url = None
 super_user_file_url = super_user_file_url_override_url if super_user_file_url_override_url else "https://raw.github.com/ooaklee/awsklean-iam-tool/master/superUsers.json"
+day_range = None
 
 
 def is_dry_run_active(state: bool) -> None:
@@ -562,6 +563,7 @@ def users_with_at_least_one_unused_access_method_from(collections_of_users: dict
     """
     global account_identification
     global is_notify_slack_mode_set
+    global day_range
 
     # Blank list to hold affected users
     affected_users_list = []
@@ -576,18 +578,21 @@ def users_with_at_least_one_unused_access_method_from(collections_of_users: dict
     # Remove duplicated
     affected_users_set = set(affected_users_list)
 
+    # Length of affected users
+    number_of_affected_users = len(affected_users_set)
+
     # Messages
-    simple_message_found_slack = f"The following user(s) meet the requirements for access deletion/ deactivation of at least one of their IAM access methods on AWS account ({account_identification}): • {' • '.join(affected_users_set)}"
-    simple_message_found_local = f"The user(s) below meet the requirement(s) for access deletion/ deactivation of at least one of their IAM access methods on the AWS account [{account_identification}]"
-    simple_message_not_found = f"No users breach the specified period for access deletion/ deactivation on the AWS account [{account_identification}]"
+    simple_message_found_slack = f"The following {number_of_affected_users} user(s) meet the requirement (no usage within {day_range} days) for access deletion/ deactivation of at least one of their IAM access methods on AWS account ({account_identification}): • {' • '.join(affected_users_set)}"
+    simple_message_found_local = f"The {number_of_affected_users} user(s) below meet the requirement (no usage within {day_range} days) for access deletion/ deactivation of at least one of their IAM access methods on the AWS account [{account_identification}]"
+    simple_message_not_found = f"No users breach the specified period (no usage within {day_range} days) for access deletion/ deactivation on the AWS account [{account_identification}]"
 
     # Check to see if slack should be notified
     if is_notify_slack_mode_set:
-        if len(affected_users_set) > 0:
+        if  number_of_affected_users > 0:
             send_to_slack_this(message=simple_message_found_slack)
     
     # Print list to terminal
-    if len(affected_users_set) > 0:
+    if number_of_affected_users > 0:
         print(simple_message_found_local)
         for user in affected_users_set:
             print(f"• {user}")
@@ -630,7 +635,7 @@ def all_users_not_using_any_access_methods_from(collections_of_users: dict, disp
             list_of_unused_user_accounts.append(user)
     
     # Messages
-    simple_message_found_slack = f"The following users will be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call: • {' • '.join(list_of_unused_user_accounts)}"
+    simple_message_found_slack = f"The following user(s) will be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call: • {' • '.join(list_of_unused_user_accounts)}"
     simple_message_found_local = f"The user(s) below meet the requirement(s) to be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call"
     simple_message_not_found = f"No users on the AWS account ({account_identification}) breach the specified requirement(s) to be permanently removed."
 
@@ -871,18 +876,23 @@ def check_and_action_active(arguments: object) -> None:
 
     :returns: None
     """
+    global day_range
     minimum_days = 2
 
     if arguments.show_users_with_no_usage_within:
+        day_range = arguments.show_users_with_no_usage_within
         get_all_users_not_used_in_the_last(number_of_days=arguments.show_users_with_no_usage_within, display=True)
     
     if arguments.list_users_with_no_usage_within:
+        day_range = arguments.list_users_with_no_usage_within
         users_with_at_least_one_unused_access_method_from(collections_of_users=get_all_users_not_used_in_the_last(number_of_days=arguments.list_users_with_no_usage_within))
 
     if arguments.deactivate_access_for_users_with_no_usage_within:
+        day_range = arguments.deactivate_access_for_users_with_no_usage_within
         carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(number_of_days=arguments.deactivate_access_for_users_with_no_usage_within), action='deactivate')
     
     if arguments.delete_access_for_users_with_no_usage_within:
+        day_range = arguments.delete_access_for_users_with_no_usage_within
         carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(number_of_days=arguments.delete_access_for_users_with_no_usage_within), action='delete')
     
     if arguments.list_users_to_be_kleaned:
