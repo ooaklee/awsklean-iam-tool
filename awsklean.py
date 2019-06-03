@@ -23,7 +23,7 @@ import copy
 
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
-script_version = "1.0.9"
+script_version = "1.0.10"
 script_name = os.path.basename(__file__).strip(".py")
 is_dry_run_mode_set = False
 is_notify_slack_mode_set = False
@@ -50,15 +50,22 @@ def is_dry_run_active(state: bool) -> None:
 
     is_dry_run_mode_set = state
 
-def dry_run_print(message: str):
+def dry_run_setup(message: str, forward=False):
     """Adds the 'dry-run mode' prefix to message before printing to terminal
 
     :param message: The message to be printed to the terminal
     :type message: str
+    :param forward: Whether the complete message should be returned as string
+    :type forward: bool
 
-    :returns: None
+    :returns: A string containing the dry run prefix
     """
-    print(f"[DRY-RUN MODE] {message}")
+    dry_run_message = f"[DRY-RUN MODE] {message}"
+
+    if not forward:
+        print(dry_run_message)
+    else:
+        return dry_run_message
 
 def live_mode_print(message: str):
     """Adds the 'live mode' prefix to message before printing to terminal
@@ -670,9 +677,11 @@ def remove_password_access_for(user_name: str):
     # Generate simple message
     simple_message=f"DELETED CONSOLE ACCESS FOR {user_name} ON AWS ACCOUNT {account_identification}"
     
-    # Check if dry run mode set and print message (NO ACTION)
+    # Check if dry run mode set and whether slack needs to be notified
     if is_dry_run_mode_set:
-        dry_run_print(message=simple_message)
+        dry_run_setup(message=simple_message)
+        if is_notify_slack_mode_set:
+            send_to_slack_this(message=dry_run_setup(message=simple_message, forward=True))
     else:
         # Check if notify slack set and act accordingly
         if is_notify_slack_mode_set:
@@ -715,9 +724,11 @@ def alter_access_key_for(user_name: str, access_key_number: int, action: str):
             # Generate simple message
             simple_message=f"DEACTIVATED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
             
-            # Check if dry run mode set and print message (NO ACTION)
+            # Check if dry run mode set and whether slack needs to be notified
             if is_dry_run_mode_set:
-                dry_run_print(message=simple_message)
+                dry_run_setup(message=simple_message)
+                if is_notify_slack_mode_set:
+                    send_to_slack_this(message=dry_run_setup(message=simple_message, forward=True))
             else:
                 # Check if notify slack set and act accordingly
                 if is_notify_slack_mode_set:
@@ -737,9 +748,11 @@ def alter_access_key_for(user_name: str, access_key_number: int, action: str):
              # Generate simple message
             simple_message=f"DELETED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
 
-            # Check if dry run mode set and print message (NO ACTION)
+            # Check if dry run mode set and whether slack needs to be notified
             if is_dry_run_mode_set:
-                dry_run_print(message=simple_message)
+                dry_run_setup(message=simple_message)
+                if is_notify_slack_mode_set:
+                    send_to_slack_this(message=dry_run_setup(message=simple_message, forward=True))
             else:
                 # Check if notify slack set and act accordingly
                 if is_notify_slack_mode_set:
