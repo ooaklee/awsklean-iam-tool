@@ -19,8 +19,6 @@ import dateutil.parser
 import copy
 
 
-                                                                                                                                                                                                                                                              
-
 # GLOBAL SCRIPT VARIABLES
 script_location = os.path.dirname(os.path.realpath(__file__))
 script_version = "1.0.10"
@@ -50,6 +48,7 @@ def is_dry_run_active(state: bool) -> None:
 
     is_dry_run_mode_set = state
 
+
 def dry_run_setup(message: str, forward=False):
     """Adds the 'dry-run mode' prefix to message before printing to terminal
 
@@ -67,6 +66,7 @@ def dry_run_setup(message: str, forward=False):
     else:
         return dry_run_message
 
+
 def live_mode_print(message: str):
     """Adds the 'live mode' prefix to message before printing to terminal
 
@@ -75,7 +75,8 @@ def live_mode_print(message: str):
 
     :returns: None
     """
-    print(f"[LIVE MODE] {message}") 
+    print(f"[LIVE MODE] {message}")
+
 
 def is_super_user_override_url_passed_in(arguments: object):
     """Replaces the URL to get default super user json with custom user provided.
@@ -97,7 +98,7 @@ def is_super_user_override_url_passed_in(arguments: object):
 
         # Override set
         super_user_file_url_override_url = arguments.super_users_url
-    
+
 
 def is_notify_slack_active(state: bool) -> None:
     """Checks to see if --slack-notify argument is passed to the script and sets global variable accordingly
@@ -112,18 +113,20 @@ def is_notify_slack_active(state: bool) -> None:
 
     is_notify_slack_mode_set = state
 
+
 def is_an_aws_region_passed_in(region_option: str) -> None:
     """Check to see if region value passed and update tool's default region accordingly
 
     :param region_option: String containing name of AWS region
     :type region_option: str
-    
+
 
     :returns: None
     """
 
     if region_option:
         os.environ["AWS_DEFAULT_REGION"] = region_option
+
 
 def send_to_slack_this(message: str) -> None:
     """Sends message to specified webhook that's saved as an environment variable
@@ -142,7 +145,7 @@ def send_to_slack_this(message: str) -> None:
 set this before passing the --notify-slack argument.
         """)
         exit(1)
-    
+
     # Build valid dict containing message and configuration
     configured_message_dict = ast.literal_eval(
         f"""{{ "text": "{message}", "icon_url": "https://www.freeiconspng.com/uploads/black-key-symbol-icon-6.png", "username": "{script_name[:4].upper() + script_name[4:].lower()}"}}"""
@@ -151,11 +154,13 @@ set this before passing the --notify-slack argument.
     # Send POST request to webhook containing message
     requests.post(
         slack_webhook,
-        data = json.dumps(configured_message_dict)
+        data=json.dumps(configured_message_dict)
     )
 
 # Generate random number
-def generate_random_number_between(first: int =  1, last: int = 101) -> int:
+
+
+def generate_random_number_between(first: int = 1, last: int = 101) -> int:
     """Generates a number between the first and last integers
 
 
@@ -169,6 +174,7 @@ def generate_random_number_between(first: int =  1, last: int = 101) -> int:
     """
     return random.randint(first, last)
 
+
 def create_iam_client_using_default_system_credential():
     """Create an IAM client using boto3 sessions and set relevant global variables
     """
@@ -178,6 +184,7 @@ def create_iam_client_using_default_system_credential():
     current_session = boto3.session.Session()
     boto_config_info = copy.deepcopy(current_session)
     iam_client = current_session.client("iam")
+
 
 def create_boto_client_using(credential: str, is_role: bool = False, session_token: str = "") -> None:
     """Uses the passed credentials and attempts to create a boto client with it
@@ -200,22 +207,23 @@ def create_boto_client_using(credential: str, is_role: bool = False, session_tok
     if is_role:
         # Check to make sure credentials is comma-seperated
         if ',' not in credential:
-            print("\nPlease ensure you are passing the role using a comma-seperated string.\n Use `python {script_name}.py --help` for more information")
+            print(
+                "\nPlease ensure you are passing the role using a comma-seperated string.\n Use `python {script_name}.py --help` for more information")
             exit(1)
-        
+
         # Attempt to use available leading AWS to create STS client
         try:
             sts_client = boto_config_info.client('sts')
         except:
             sts_client = boto3.client('sts')
-        
+
         # Create account number and role name variables
         aws_account_number_for_role, name_of_role = credential.split(",")
 
         # Attempt to assume role
         try:
             assumed_role_object = sts_client.assume_role(
-                RoleArn = f"arn:aws:iam::{aws_account_number_for_role}:role/{name_of_role}",
+                RoleArn=f"arn:aws:iam::{aws_account_number_for_role}:role/{name_of_role}",
                 RoleSessionName=f"AssumeRoleSession{generate_random_number_between()}"
             )
         except botocore.exceptions.ClientError as e:
@@ -231,14 +239,15 @@ Please update its Policy to include the AWS IAM service.
             credential = assumed_role_object['Credentials']
 
             # Temporary variables to hold assumed credential
-            tmp_access_key_id, tmp_secret_access_key, tmp_session_token = credential['AccessKeyId'], credential['SecretAccessKey'], credential['SessionToken']
-            
+            tmp_access_key_id, tmp_secret_access_key, tmp_session_token = credential[
+                'AccessKeyId'], credential['SecretAccessKey'], credential['SessionToken']
+
             # Use temporary variables to create IAM client
             tmp_credential_str_object = f"{{ 'aws_key_id': '{tmp_access_key_id}', 'aws_secret': '{tmp_secret_access_key}' }}"
-            create_boto_client_using( credential=tmp_credential_str_object, 
-                                        is_role=False, 
-                                        session_token=tmp_session_token
-                                    )
+            create_boto_client_using(credential=tmp_credential_str_object,
+                                     is_role=False,
+                                     session_token=tmp_session_token
+                                     )
 
     # If user passed object or aws profile name
     else:
@@ -265,36 +274,41 @@ IMPORTANT:
             # Check to see if session token not passed
             if not session_token:
                 # Create crrent session using dict and assign to global variable
-                current_session = boto3.session.Session(aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'])
+                current_session = boto3.session.Session(
+                    aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'])
                 boto_config_info = copy.deepcopy(current_session)
             else:
                 # Create crrent session using dict AND session token, them assign to global variable
-                current_session = boto3.session.Session(aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'], aws_session_token=session_token)
+                current_session = boto3.session.Session(
+                    aws_access_key_id=credential['aws_key_id'], aws_secret_access_key=credential['aws_secret'], aws_session_token=session_token)
                 boto_config_info = copy.deepcopy(current_session)
-            
+
             print(f"{script_name} is connecting using a credential object")
 
             # Create IAM client using session created above
             iam_client = current_session.client("iam")
-        
+
         # look to see if credential passed a string
         elif isinstance(credential, str):
             # Assume the credential pass is set up in the aws credential config file
-            # AND create a session, them assign to global variable 
+            # AND create a session, them assign to global variable
             try:
-                current_session = boto3.session.Session(profile_name=credential)
+                current_session = boto3.session.Session(
+                    profile_name=credential)
                 boto_config_info = copy.deepcopy(current_session)
 
                 # Create IAM client
                 iam_client = current_session.client("iam")
             except ProfileNotFound:
                 # Will raise if profile cannot be found
-                print(f"""ATTENTION: \nThe profile "{credential}" does not appear to be present in the AWS credentials config file. \nOn Unix systems, this often can be found in the ~/.aws directory. \nPlease double-check and add if necessary!""")
+                print(
+                    f"""ATTENTION: \nThe profile "{credential}" does not appear to be present in the AWS credentials config file. \nOn Unix systems, this often can be found in the ~/.aws directory. \nPlease double-check and add if necessary!""")
                 exit(1)
-        
+
         else:
             # Use default AWS credential
             create_iam_client_using_default_system_credential()
+
 
 def get_current_account_id() -> str:
     """Gets the alias of the AWS account that has created the IAM client or returns account number
@@ -317,24 +331,27 @@ def get_current_account_id() -> str:
         for response in alias_paginator.paginate():
             alias_holder.append(response['AccountAliases'])
     except botocore.exceptions.EndpointConnectionError as err:
-        print(f"""ATTENTION: \nPlease pass an AWS region using the --aws-region argument. \n\t- {str(err)}""")
+        print(
+            f"""ATTENTION: \nPlease pass an AWS region using the --aws-region argument. \n\t- {str(err)}""")
         exit(1)
 
     # Assumption is made that the alias in the first index of the list is correct and make sure list is not empty and return first index
     if len(alias_holder) > 0 and alias_holder[0] != []:
         return alias_holder[0][0]
     else:
-        # Check to see if boto_config_info has a value set, which will assume 
+        # Check to see if boto_config_info has a value set, which will assume
         # that either a role, profile, or credential object was passed.
         if boto_config_info != None:
             try:
                 # Use boto_config_info to build STS client and retrieve the account number.
-                account_number = boto_config_info.client('sts').get_caller_identity().get('Account')
+                account_number = boto_config_info.client(
+                    'sts').get_caller_identity().get('Account')
             except:
                 # TODO: Create more specific exception handlers with actions
                 return "N/A - GET ACC FAIL"
             else:
                 return account_number
+
 
 def get_all_users_in_aws_account():
     """Uses global IAM client to generate a list of all the users in the account with their
@@ -354,16 +371,19 @@ def get_all_users_in_aws_account():
     try:
         response = iam_client.get_credential_report()
     except iam_client.exceptions.CredentialReportNotReadyException:
-        print(f"""ATTENTION:\nGathering information for all users, please wait.  The process will take approximately {seconds_to_wait} seconds.""")
+        print(
+            f"""ATTENTION:\nGathering information for all users, please wait.  The process will take approximately {seconds_to_wait} seconds.""")
         time.sleep(seconds_to_wait)
         try:
             response = iam_client.get_credential_report()
         except iam_client.exceptions.CredentialReportNotReadyException:
-            print(f"""ATTENTION:\nSomething has gone wrong, please try again in around {seconds_to_wait} minutes""")
+            print(
+                f"""ATTENTION:\nSomething has gone wrong, please try again in around {seconds_to_wait} minutes""")
             exit(1)
-    
+
     # Return a list with the information about all the users from report
     return response['Content'].decode().split('\n')
+
 
 def convert_this_to_date(string: str = "") -> object:
     """Converts passed string to a date object
@@ -375,6 +395,7 @@ def convert_this_to_date(string: str = "") -> object:
     :rtype object
     """
     return dateutil.parser.parse(string)
+
 
 def load_super_users_file_from(destination: str) -> dict:
     """Gets the superuser file dependant on destination passed
@@ -393,24 +414,23 @@ def load_super_users_file_from(destination: str) -> dict:
     if destination == "local":
         # Open file
         with open(f"{script_location}/{super_user_file_name}", "r") as file:
-            super_users_data=file.read().strip()
-            super_users_data=json.loads(super_users_data)
-        
+            super_users_data = file.read().strip()
+            super_users_data = json.loads(super_users_data)
+
         return super_users_data
     elif destination == "remote":
         # Download file from URL
         response = requests.get(super_user_file_url)
-        
+
         if response.status_code == 200:
             # Write content of URL body to file
             with open(f"{script_location}/{super_user_file_name}", "w") as file:
                 file.write(response.text)
-            
+
             # Return the dict loaded from the function
             return load_super_users_file_from(destination="local")
         else:
             raise Exception(f"Could not GET from: {super_user_file_url}")
-
 
 
 def get_super_users_dict() -> dict:
@@ -424,13 +444,15 @@ def get_super_users_dict() -> dict:
     """
     # Attempt to load super user file locally
     try:
-        dict_of_super_users = load_super_users_file_from(destination = "local")
+        dict_of_super_users = load_super_users_file_from(destination="local")
     except IOError:
-        # There isn't a local file 
+        # There isn't a local file
         try:
-            dict_of_super_users = load_super_users_file_from(destination = "remote")
+            dict_of_super_users = load_super_users_file_from(
+                destination="remote")
         except:
-            print(f"""ATTENTION:\nPlease save a json file named {super_user_file_name} in {script_location} with a file body as follows:""")
+            print(
+                f"""ATTENTION:\nPlease save a json file named {super_user_file_name} in {script_location} with a file body as follows:""")
             print("""
 {
     "superUsers" : [
@@ -444,8 +466,9 @@ def get_super_users_dict() -> dict:
 - [AWS IAM user name] can be multiple users comma separated using JSON forrmatting
 """)
             exit(1)
-    
+
     return dict_of_super_users
+
 
 def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: list = get_all_users_in_aws_account, display=False):
     """Checks to see if any user accounts in the source report have not logged in AWS in specified time.
@@ -468,7 +491,7 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
     list_of_all_aws_users_out_of_range = []
 
     # Dict holding list of super users
-    super_user_keep =  get_super_users_dict()
+    super_user_keep = get_super_users_dict()
 
     for user in source_report()[1:]:
         user = user.split(",")
@@ -480,21 +503,25 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
                 if user[4] == 'no_information':
                     # Make sure user is not super user before adding to list
                     if user[0] not in super_user_keep['superUsers']:
-                        list_of_users_to_action[user[0]]['password_access'] = 'null'
-                # Check if password_last_used is older than the specificed range        
-                elif convert_this_to_date( string = user[4] ) < (current_date_tzutc - number_of_days_as_delta):
+                        list_of_users_to_action[user[0]
+                                                ]['password_access'] = 'null'
+                # Check if password_last_used is older than the specificed range
+                elif convert_this_to_date(string=user[4]) < (current_date_tzutc - number_of_days_as_delta):
                     # Make sure user is not super user before adding to list
                     if user[0] not in super_user_keep['superUsers']:
                         list_of_all_aws_users_out_of_range.append(user)
-                        list_of_users_to_action[user[0]]['password_access'] = True
+                        list_of_users_to_action[user[0]
+                                                ]['password_access'] = True
                 else:
                     # Make sure user is not super user before adding to list
                     if user[0] not in super_user_keep['superUsers']:
-                        list_of_users_to_action[user[0]]['password_access'] = False
+                        list_of_users_to_action[user[0]
+                                                ]['password_access'] = False
             else:
                 # Make sure user is not super user before adding to list
                 if user[0] not in super_user_keep['superUsers']:
-                    list_of_users_to_action[user[0]]['password_access'] = 'null'
+                    list_of_users_to_action[user[0]
+                                            ]['password_access'] = 'null'
             # Check if access_key_1_active is set to 'true'
             if user[8] == 'true':
                 # Check to see if access_key_last_used_date is NOT 'N/A'
@@ -502,25 +529,30 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
                     # Check to see if access_key_last_used_date is 'no_information'
                     if user[10] == 'no_information':
                         if user[0] not in super_user_keep['superUsers']:
-                            list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                            list_of_users_to_action[user[0]
+                                                    ]['access_key_1_access'] = True
                     # Check if access_key_1_last_used_date is older than the specificed range
-                    elif convert_this_to_date( string = user[10] ) < (current_date_tzutc - number_of_days_as_delta):
+                    elif convert_this_to_date(string=user[10]) < (current_date_tzutc - number_of_days_as_delta):
                         # Make sure user is not super user before adding to list
                         if user[0] not in super_user_keep['superUsers']:
                             list_of_all_aws_users_out_of_range.append(user)
-                            list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                            list_of_users_to_action[user[0]
+                                                    ]['access_key_1_access'] = True
                     else:
                         # Make sure user is not super user before adding to list
                         if user[0] not in super_user_keep['superUsers']:
-                            list_of_users_to_action[user[0]]['access_key_1_access'] = False
+                            list_of_users_to_action[user[0]
+                                                    ]['access_key_1_access'] = False
                 else:
                     # Make sure user is not super user before adding to list
                     if user[0] not in super_user_keep['superUsers']:
-                        list_of_users_to_action[user[0]]['access_key_1_access'] = True
+                        list_of_users_to_action[user[0]
+                                                ]['access_key_1_access'] = True
             else:
                 # Make sure user is not super user before adding to list
                 if user[0] not in super_user_keep['superUsers']:
-                    list_of_users_to_action[user[0]]['access_key_1_access'] = 'null'
+                    list_of_users_to_action[user[0]
+                                            ]['access_key_1_access'] = 'null'
 
             # Check if access_key_2_active is set to 'true'
             if user[13] == 'true':
@@ -529,35 +561,42 @@ def get_all_users_not_used_in_the_last(number_of_days: int = 60, source_report: 
                     # Check to see if access_key_2_last_used_date is 'no_information'
                     if user[15] == 'no_information':
                         if user[0] not in super_user_keep['superUsers']:
-                            list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                            list_of_users_to_action[user[0]
+                                                    ]['access_key_2_access'] = True
                     # Check if access_key_2_last_used_date is older than the specificed range
-                    elif convert_this_to_date( string = user[15] ) < (current_date_tzutc - number_of_days_as_delta):
+                    elif convert_this_to_date(string=user[15]) < (current_date_tzutc - number_of_days_as_delta):
                         # Make sure user is not super user before adding to list
                         if user[0] not in super_user_keep['superUsers']:
                             list_of_all_aws_users_out_of_range.append(user)
-                            list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                            list_of_users_to_action[user[0]
+                                                    ]['access_key_2_access'] = True
                     else:
                         # Make sure user is not super user before adding to list
                         if user[0] not in super_user_keep['superUsers']:
-                            list_of_users_to_action[user[0]]['access_key_2_access'] = False
+                            list_of_users_to_action[user[0]
+                                                    ]['access_key_2_access'] = False
                 else:
                     # Make sure user is not super user before adding to list
                     if user[0] not in super_user_keep['superUsers']:
-                        list_of_users_to_action[user[0]]['access_key_2_access'] = True
+                        list_of_users_to_action[user[0]
+                                                ]['access_key_2_access'] = True
             else:
                 # Make sure user is not super user before adding to list
                 if user[0] not in super_user_keep['superUsers']:
-                    list_of_users_to_action[user[0]]['access_key_2_access'] = 'null'
+                    list_of_users_to_action[user[0]
+                                            ]['access_key_2_access'] = 'null'
         except KeyError as identifier:
             # TODO: Create more specific actions
             pass
 
     if display:
         # Print the list of users to terminal
-        print(json.dumps(list_of_users_to_action, indent=4, separators=(',', ': ')))
+        print(json.dumps(list_of_users_to_action,
+                         indent=4, separators=(',', ': ')))
     else:
         # Return list
         return list_of_users_to_action
+
 
 def users_with_at_least_one_unused_access_method_from(collections_of_users: dict):
     """Checks which of the users from the passed collection has at least one access method that failed 
@@ -581,7 +620,7 @@ def users_with_at_least_one_unused_access_method_from(collections_of_users: dict
         for access_method, value in collections_of_users[user].items():
             if value and value != 'null':
                 affected_users_list.append(user)
-    
+
     # Remove duplicated
     affected_users_set = set(affected_users_list)
 
@@ -595,9 +634,9 @@ def users_with_at_least_one_unused_access_method_from(collections_of_users: dict
 
     # Check to see if slack should be notified
     if is_notify_slack_mode_set:
-        if  number_of_affected_users > 0:
+        if number_of_affected_users > 0:
             send_to_slack_this(message=simple_message_found_slack)
-    
+
     # Print list to terminal
     if number_of_affected_users > 0:
         print(simple_message_found_local)
@@ -605,6 +644,7 @@ def users_with_at_least_one_unused_access_method_from(collections_of_users: dict
             print(f"• {user}")
     else:
         print(f"{simple_message_not_found}")
+
 
 def all_users_not_using_any_access_methods_from(collections_of_users: dict, display=False) -> list:
     """Checks through a collection of users and holds (or shows if requested) any users that are not using any of their access methods to AWS account,
@@ -632,7 +672,7 @@ def all_users_not_using_any_access_methods_from(collections_of_users: dict, disp
         for access_method, value in collections_of_users[user].items():
             if value == 'null':
                 dict_of_users_access_method_null_count[user] += 1
-    
+
     # List of users that will be modified by tool
     list_of_unused_user_accounts = []
 
@@ -640,7 +680,7 @@ def all_users_not_using_any_access_methods_from(collections_of_users: dict, disp
     for user in dict_of_users_access_method_null_count:
         if dict_of_users_access_method_null_count[user] == number_of_access_methods:
             list_of_unused_user_accounts.append(user)
-    
+
     # Messages
     simple_message_found_slack = f"The following user(s) will be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call: • {' • '.join(list_of_unused_user_accounts)}"
     simple_message_found_local = f"The user(s) below meet the requirement(s) to be permanently removed from AWS account ({account_identification}) on the next `--klean-users` call"
@@ -654,7 +694,7 @@ def all_users_not_using_any_access_methods_from(collections_of_users: dict, disp
                 print(f"• {user}")
         else:
             print(simple_message_not_found)
-    
+
     # Notify slack of affected user accounts
     if is_notify_slack_mode_set:
         if len(list_of_unused_user_accounts) > 0:
@@ -663,6 +703,7 @@ def all_users_not_using_any_access_methods_from(collections_of_users: dict, disp
     # If display not True then return list of affected users
     if not display:
         return list_of_unused_user_accounts
+
 
 def remove_password_access_for(user_name: str):
     """Deletes the console access to AWS account for passed IAM username
@@ -675,24 +716,27 @@ def remove_password_access_for(user_name: str):
     global account_identification
 
     # Generate simple message
-    simple_message=f"DELETED CONSOLE ACCESS FOR {user_name} ON AWS ACCOUNT {account_identification}"
-    
+    simple_message = f"DELETED CONSOLE ACCESS FOR {user_name} ON AWS ACCOUNT {account_identification}"
+
     # Check if dry run mode set and whether slack needs to be notified
     if is_dry_run_mode_set:
         dry_run_setup(message=simple_message)
         if is_notify_slack_mode_set:
-            send_to_slack_this(message=dry_run_setup(message=simple_message, forward=True))
+            send_to_slack_this(message=dry_run_setup(
+                message=simple_message, forward=True))
     else:
         # Check if notify slack set and act accordingly
         if is_notify_slack_mode_set:
-            send_to_slack_this(message=f"{user_name}'s Console Access has been revoked on AWS account ({account_identification}).")
-        
+            send_to_slack_this(
+                message=f"{user_name}'s Console Access has been revoked on AWS account ({account_identification}).")
+
         # Print to terminal
         live_mode_print(message=simple_message)
 
         iam_client.delete_login_profile(
             UserName=user_name,
         )
+
 
 def alter_access_key_for(user_name: str, access_key_number: int, action: str):
     """Modifys the access key(s) for passed IAM user. It can remove or deactivate dependant on action passed.
@@ -713,26 +757,29 @@ def alter_access_key_for(user_name: str, access_key_number: int, action: str):
 
     # Nested function to get access key ID for passed user
     def get_additional_access_key_information_for(user_name: str = user_name):
-        access_key_infomation_paginator = iam_client.get_paginator('list_access_keys')
+        access_key_infomation_paginator = iam_client.get_paginator(
+            'list_access_keys')
         for information in access_key_infomation_paginator.paginate(UserName=user_name):
             return information
-    
+
     # Nested function to deactivate access key ID for passed user
     def for_this_users_access_key_do(user: str, access_key: str, action: str):
         """Acts the passed action to the named access key for the stated user"""
         if action == "deactivate":
             # Generate simple message
-            simple_message=f"DEACTIVATED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
-            
+            simple_message = f"DEACTIVATED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
+
             # Check if dry run mode set and whether slack needs to be notified
             if is_dry_run_mode_set:
                 dry_run_setup(message=simple_message)
                 if is_notify_slack_mode_set:
-                    send_to_slack_this(message=dry_run_setup(message=simple_message, forward=True))
+                    send_to_slack_this(message=dry_run_setup(
+                        message=simple_message, forward=True))
             else:
                 # Check if notify slack set and act accordingly
                 if is_notify_slack_mode_set:
-                    send_to_slack_this(message=f"{user}'s Access Key ({access_key}) has been deactivated on AWS account ({account_identification}).")
+                    send_to_slack_this(
+                        message=f"{user}'s Access Key ({access_key}) has been deactivated on AWS account ({account_identification}).")
 
                 # Print to terminal
                 live_mode_print(message=simple_message)
@@ -746,17 +793,19 @@ def alter_access_key_for(user_name: str, access_key_number: int, action: str):
 
         elif action == "delete":
              # Generate simple message
-            simple_message=f"DELETED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
+            simple_message = f"DELETED KEY {access_key} FOR {user} ON AWS ACCOUNT {account_identification}"
 
             # Check if dry run mode set and whether slack needs to be notified
             if is_dry_run_mode_set:
                 dry_run_setup(message=simple_message)
                 if is_notify_slack_mode_set:
-                    send_to_slack_this(message=dry_run_setup(message=simple_message, forward=True))
+                    send_to_slack_this(message=dry_run_setup(
+                        message=simple_message, forward=True))
             else:
                 # Check if notify slack set and act accordingly
                 if is_notify_slack_mode_set:
-                    send_to_slack_this(message=f"{user}'s Access Key ({access_key}) has been deleted on AWS account ({account_identification}).")
+                    send_to_slack_this(
+                        message=f"{user}'s Access Key ({access_key}) has been deleted on AWS account ({account_identification}).")
 
                 # Print to terminal
                 live_mode_print(message=simple_message)
@@ -766,15 +815,16 @@ def alter_access_key_for(user_name: str, access_key_number: int, action: str):
                     AccessKeyId=access_key,
                     UserName=user
                 )
-    
+
     # Assign additional information into variable
     user_access_key_information = get_additional_access_key_information_for()
 
     # Check to make sure Access Key information exists
     if not user_access_key_information['AccessKeyMetadata']:
-        print(f"No access key information can be found for user {user_name} on AWS account {account_identification}" )
+        print(
+            f"No access key information can be found for user {user_name} on AWS account {account_identification}")
         return ""
-    
+
     # Verb creator
     verb = "deactiving" if (action == "deactivate") else "deleting"
 
@@ -783,15 +833,17 @@ def alter_access_key_for(user_name: str, access_key_number: int, action: str):
         # Get 1st access key
         access_key_1 = user_access_key_information['AccessKeyMetadata'][0]['AccessKeyId']
         print(f"{verb} access_key_1 {access_key_1} for user ({user_name}) on AWS account {account_identification}")
-        for_this_users_access_key_do(user=user_name, access_key=access_key_1, action=action)
+        for_this_users_access_key_do(
+            user=user_name, access_key=access_key_1, action=action)
     elif access_key_number == 2:
         # Get 2nd access key
         access_key_2 = user_access_key_information['AccessKeyMetadata'][1]['AccessKeyId']
         print(f"{verb} access_key_2 {access_key_2} for user ({user_name}) on AWS account {account_identification}")
-        for_this_users_access_key_do(user=user_name, access_key=access_key_2, action=action)
- 
+        for_this_users_access_key_do(
+            user=user_name, access_key=access_key_2, action=action)
 
-def carry_out_action_on_users_in(users_collection: dict, action = ""):
+
+def carry_out_action_on_users_in(users_collection: dict, action=""):
     """Runs passed action against any user's methods of access in the users collection that is 'True'
 
     :param users_collection: Dict of users, each its own dict containing information about user's methods of access status
@@ -809,19 +861,24 @@ def carry_out_action_on_users_in(users_collection: dict, action = ""):
                 if access_method == 'access_key_1_access':
                     # Check which action is passed
                     if action == 'delete':
-                        alter_access_key_for( user_name = user, access_key_number=1, action=action )
+                        alter_access_key_for(
+                            user_name=user, access_key_number=1, action=action)
                     if action == 'deactivate':
-                        alter_access_key_for( user_name = user, access_key_number=1, action=action )
+                        alter_access_key_for(
+                            user_name=user, access_key_number=1, action=action)
                 elif access_method == 'access_key_2_access':
                     # Check which action is passed
                     if action == 'delete':
-                        alter_access_key_for( user_name = user, access_key_number=2, action=action )
+                        alter_access_key_for(
+                            user_name=user, access_key_number=2, action=action)
                     if action == 'deactivate':
-                        alter_access_key_for( user_name = user, access_key_number=2, action=action )
+                        alter_access_key_for(
+                            user_name=user, access_key_number=2, action=action)
                 elif access_method == 'password_access':
                     # AWS IAM passwords can only be deleted
-                    remove_password_access_for(user_name = user)
-                
+                    remove_password_access_for(user_name=user)
+
+
 def are_set_credentials_arguments_active(arguments: object) -> None:
     """Checks the arguments passed and sees if any AWS credential overrides are present
 
@@ -848,6 +905,7 @@ def are_set_credentials_arguments_active(arguments: object) -> None:
     # Get the alias and set to global variable
     account_identification = get_current_account_id()
 
+
 def initialise_leading_iam_client_check(arguments: object) -> None:
     """Checks the environemt variables to see if on a Jenkins manchine and sees if 
     expected arguments are passed if true. Otherwise creates leading IAM client with
@@ -862,10 +920,11 @@ def initialise_leading_iam_client_check(arguments: object) -> None:
 
     if os.getenv("JENKINS_URL") != None:
         # Make sure Boto3 AWS_* environment variables aren't set
-        if ( os.getenv("AWS_ACCESS_KEY_ID") == None ) and ( os.getenv("AWS_SECRET_ACCESS_KEY") == None ):
+        if (os.getenv("AWS_ACCESS_KEY_ID") == None) and (os.getenv("AWS_SECRET_ACCESS_KEY") == None):
             # Make sure user has passed the name of the AWS profile to use on Jenkins
             if args.jenkins_aws_profile_name:
-                create_boto_client_using(credential=args.jenkins_aws_profile_name)
+                create_boto_client_using(
+                    credential=args.jenkins_aws_profile_name)
             else:
                 print(f"""ATTENTION:
 {script_name} has detected it is being used in a Jenkins system without you declaring which profile it should use by passing either one  of the `--jenkins-aws-profile-name`  OR `--japn` arguments. 
@@ -877,8 +936,9 @@ Please pass the argument with a valid profile name and try again!
             # Create placeholder for boto IAM client using Jenkin's AWS_ environment variables
             create_iam_client_using_default_system_credential()
     else:
-        # create placeholder for boto IAM client  
+        # create placeholder for boto IAM client
         create_iam_client_using_default_system_credential()
+
 
 def check_and_action_active(arguments: object) -> None:
     """Checks the arguments passed to see which combination of functions need to be called and 
@@ -894,22 +954,28 @@ def check_and_action_active(arguments: object) -> None:
 
     if arguments.show_users_with_no_usage_within:
         day_range = arguments.show_users_with_no_usage_within
-        get_all_users_not_used_in_the_last(number_of_days=arguments.show_users_with_no_usage_within, display=True)
-    
+        get_all_users_not_used_in_the_last(
+            number_of_days=arguments.show_users_with_no_usage_within, display=True)
+
     if arguments.list_users_with_no_usage_within:
         day_range = arguments.list_users_with_no_usage_within
-        users_with_at_least_one_unused_access_method_from(collections_of_users=get_all_users_not_used_in_the_last(number_of_days=arguments.list_users_with_no_usage_within))
+        users_with_at_least_one_unused_access_method_from(collections_of_users=get_all_users_not_used_in_the_last(
+            number_of_days=arguments.list_users_with_no_usage_within))
 
     if arguments.deactivate_access_for_users_with_no_usage_within:
         day_range = arguments.deactivate_access_for_users_with_no_usage_within
-        carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(number_of_days=arguments.deactivate_access_for_users_with_no_usage_within), action='deactivate')
-    
+        carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(
+            number_of_days=arguments.deactivate_access_for_users_with_no_usage_within), action='deactivate')
+
     if arguments.delete_access_for_users_with_no_usage_within:
         day_range = arguments.delete_access_for_users_with_no_usage_within
-        carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(number_of_days=arguments.delete_access_for_users_with_no_usage_within), action='delete')
-    
+        carry_out_action_on_users_in(users_collection=get_all_users_not_used_in_the_last(
+            number_of_days=arguments.delete_access_for_users_with_no_usage_within), action='delete')
+
     if arguments.list_users_to_be_kleaned:
-        all_users_not_using_any_access_methods_from( get_all_users_not_used_in_the_last(number_of_days=minimum_days, display=False), display=True)
+        all_users_not_using_any_access_methods_from(get_all_users_not_used_in_the_last(
+            number_of_days=minimum_days, display=False), display=True)
+
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(
